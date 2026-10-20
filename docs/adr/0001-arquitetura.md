@@ -300,3 +300,24 @@ O usuário criará o branch `feat/m0-architecture` no terminal externo. O fecham
 inclui os gates e a revisão dos arquivos; commit, push e PR continuam exigindo
 as autorizações explícitas previstas no `AGENTS.md`. A aceitação deste ADR não
 é autorização para executar essas operações.
+
+## Adenda M1 — armazenamento e contratos
+
+O pedido do M1 detalha a decisão de separação do armazenamento: o runtime usa
+o home .myagent com override MYAGENT_HOME e alias MYAGENT_CONFIG_DIR, mas
+**somente o arquivo myagent-rust.sqlite3**, independente do myagent.db do legado.
+A implementação não abre, migra ou modifica o banco antigo. Importação continua
+adiada e exigirá comando explícito. Os testes não acessam o home real.
+
+O M1 introduz clap/serde, conforme aceito, e rusqlite bundled/limits,
+serde_json, thiserror, tempfile (testes) e winapi-util (somente Windows).
+Cada adição tem necessidade descrita em [Persistência M1](../persistence.md).
+Tokio, árvore sintática e demais dependências do ADR ainda não entram.
+
+DTOs do Rust usam datas em milissegundos Unix, preservam as tags legadas de
+parts/eventos e rejeitam modos desconhecidos. O store é síncrono para seus
+chamadores, com conexão e manutenção numa thread dedicada e fila limitada;
+o futuro adapter async deverá evitar bloquear o executor. O protocolo não
+contém tipos SQLite/runtime. Após o fetch e a geração do lockfile pelo
+usuário, a compilação e os 24 testes do M1 passaram no Windows. Os gates
+e as limitações do fechamento estão registrados em PARITY.md.

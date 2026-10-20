@@ -47,7 +47,7 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | PERM-01 | Aprovações | Y permite uma vez, A memoriza por sessão/ferramenta/workspace/escopo, N nega. Enter não aprova; Esc/Ctrl+C interrompem. Prévia rolável de diff, caminho, comando ou URL. | `S/security/permissions.ts`, `S/security/approval-scope.ts`, `S/security/tool-policy.ts`, `C/components/approval-panel.tsx`, `C/components/approval-preview.ts` | pendente | `S/security/permissions.test.ts`, `S/security/approval-scope.test.ts`, `C/components/approval-panel.test.tsx` |
 | PERM-02 | Aprovações | Timeout de 120 s, consumo único, isolamento e limpeza ao cancelar/desconectar; até 256 escopos. A é proibido para delete_file, git_commit, git_init, git_remote_add e git_push. Ferramentas desconhecidas são negadas. | `S/security/permissions.ts`, `H/schemas.ts` | pendente | `S/security/permissions.test.ts`, `S/security/approval-scope.test.ts`, `H/schemas.test.ts` |
 | PERM-03 | Automação | `none` autoriza leitura local; `reads` acrescenta web; `all` autoriza ações. Push exige opção separada e não autoaprova main/master. Comandos continuam dependentes de Docker e do modo. | `S/security/permissions.ts`, `M/options.ts`, `M/exec.ts` | pendente | `M/exec.test.ts`, `S/tools/git-workflow.test.ts`, `S/tools/test-tools.test.ts` |
-| GEN-01 | Streaming | Texto, reasoning, chamadas/resultados associados por ID, avisos, uso e estados terminais estruturados; contratos validados; UTF-8/CRLF fragmentados e EOF sem done não equivalem a sucesso. | `H/schemas.ts`, `S/services/stream-service.ts`, `C/lib/chat-events.ts`, `C/hooks/use-chat.ts`, `M/exec.ts` | pendente | `H/schemas.test.ts`, `S/services/stream-service.test.ts`, `C/lib/chat-events.test.ts`, `C/hooks/use-chat.test.tsx`, `M/exec.test.ts` |
+| GEN-01 | Streaming | Texto, reasoning, chamadas/resultados associados por ID, avisos, uso e estados terminais estruturados; contratos validados; UTF-8/CRLF fragmentados e EOF sem done não equivalem a sucesso. | `H/schemas.ts`, `S/services/stream-service.ts`, `C/lib/chat-events.ts`, `C/hooks/use-chat.ts`, `M/exec.ts` | em andamento | `H/schemas.test.ts`, `S/services/stream-service.test.ts`, `C/lib/chat-events.test.ts`, `C/hooks/use-chat.test.tsx`, `M/exec.test.ts` |
 | GEN-02 | Ciclo da geração | Uma geração ativa por sessão; lock antes de awaits; diferenciar erro, conclusão e interrupção; persistir parciais, propagar cancelamento e aguardar cleanup no encerramento. Falha no SSE terminal não duplica gravação. | `S/services/chat-service.ts`, `S/services/stream-service.ts`, `S/index.ts` | pendente | `S/services/chat-recovery.test.ts`, `S/services/stream-service.test.ts`, `S/launcher.test.ts` |
 | GEN-03 | Limites de tools | Orçamento padrão 40 chamadas, configurável até 200, verificado antes do executor; aviso perto do limite; timeout global de 5 min. Argumentos equivalentes são canonizados; resultado visível evita repetição; repetição persistente interrompe. | `S/services/tool-service.ts`, `S/services/stream-service.ts` | pendente | `S/services/tool-service.test.ts`, `S/services/tool-guard.test.ts`, `S/services/stream-service.test.ts` |
 | GEN-04 | Evidência no contexto | Releituras voltam a ser permitidas quando evidência é removida/abreviada; edição invalida leitura anterior; nota de undo invalida evidências sem ampliar permissões ou orçamento. | `S/services/tool-service.ts`, `S/services/session-context.ts` | pendente | `S/services/tool-guard.test.ts`, `S/services/stream-service.test.ts`, `S/services/session-context.test.ts` |
@@ -98,15 +98,15 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 
 | ID | Área | Funcionalidade confirmada no código | Onde está no legado | Status | Testes legados correspondentes |
 | --- | --- | --- | --- | --- | --- |
-| DB-01 | SQLite | Banco local/libsql, WAL, busy_timeout e foreign_keys; abertura lazy, transações e fechamento explícito; não depende de PostgreSQL/DATABASE_URL em runtime. | `D/client.ts`, `D/index.ts`, `P/schema.prisma` | pendente | `D/database.integration.test.ts`, `D/migrations.test.ts` |
-| DB-02 | Migrations | Runner SQL embutido, baseline e evoluções transacionais/idempotentes; enums/JSON/índices/cascatas. Prisma CLI não é requisito de runtime. | `D/migrations.ts`, `D/migrate.ts`, `P/migrations/20261016000000_sqlite_baseline/migration.sql`, `P/migrations/20261016010000_workspace_sessions/migration.sql`, `P/migrations/20261018000000_durable_generations/migration.sql` | pendente | `D/migrations.test.ts`, `D/database.integration.test.ts` |
-| SESSION-01 | Workspace | Raiz Git/caminho canônico, caixa Windows, espaços/subpastas e recusa de junctions; título com caminho; criar ou selecionar sessão mais recente por workspace. | `S/utils/workspace.ts`, `S/services/workspace-sessions.ts`, `S/routes/sessions.ts` | pendente | `S/utils/workspace.test.ts`, `S/services/workspace-sessions.test.ts`, `S/routes/sessions.test.ts` |
-| SESSION-02 | Histórico | Listagem por atividade, criação com mensagem inicial opcional, reabertura com mensagens/parts/status, contexto por sessão e validação de usuário local/workspace. Abrir/enviar/retomar renova atividade. | `S/routes/sessions.ts`, `S/services/message-service.ts`, `S/services/session-lifecycle.ts` | pendente | `S/routes/sessions.test.ts`, `S/services/session-lifecycle.test.ts`, `D/database.integration.test.ts` |
-| SESSION-03 | Leases | Exclusão entre processos no SQLite por sessão, owner aleatório, heartbeat de 5 s e expiração de 30 s; perda encerra execução, fechamento libera lease. Locks em memória continuam distintos. | `S/services/session-lease.ts`, `S/index.ts` | pendente | `S/services/workspace-sessions.test.ts`, `S/launcher.test.ts`, `D/database.integration.test.ts` |
-| SESSION-04 | Retenção | Padrão 90 dias, configurável e desativável com zero; aviso e carência mínima de 24 h; abrir cancela aviso. Limpeza horária não sobreposta, preserva leases ativos/gerações e remove artefatos. | `S/services/session-lifecycle.ts` | pendente | `S/services/session-lifecycle.test.ts`, `S/services/workspace-sessions.test.ts`, `D/database.integration.test.ts` |
-| RECOVER-01 | Journal durável | ASSISTANT começa IN_PROGRESS; journal serializa chamadas/resultados e grava antes de efeitos e antes de devolver resultados ao modelo. Órfãs viram INTERRUPTED sem afetar leases vivos de outro processo. | `S/services/generation-journal.ts`, `S/services/stream-service.ts` | pendente | `S/services/generation-journal.test.ts`, `S/services/stream-service.test.ts` |
+| DB-01 | SQLite | Banco local/libsql, WAL, busy_timeout e foreign_keys; abertura lazy, transações e fechamento explícito; não depende de PostgreSQL/DATABASE_URL em runtime. | `D/client.ts`, `D/index.ts`, `P/schema.prisma` | feito | `D/database.integration.test.ts`, `D/migrations.test.ts` |
+| DB-02 | Migrations | Runner SQL embutido, baseline e evoluções transacionais/idempotentes; enums/JSON/índices/cascatas. Prisma CLI não é requisito de runtime. | `D/migrations.ts`, `D/migrate.ts`, `P/migrations/20261016000000_sqlite_baseline/migration.sql`, `P/migrations/20261016010000_workspace_sessions/migration.sql`, `P/migrations/20261018000000_durable_generations/migration.sql` | feito | `D/migrations.test.ts`, `D/database.integration.test.ts` |
+| SESSION-01 | Workspace | Raiz Git/caminho canônico, caixa Windows, espaços/subpastas e recusa de junctions; título com caminho; criar ou selecionar sessão mais recente por workspace. | `S/utils/workspace.ts`, `S/services/workspace-sessions.ts`, `S/routes/sessions.ts` | em andamento | `S/utils/workspace.test.ts`, `S/services/workspace-sessions.test.ts`, `S/routes/sessions.test.ts` |
+| SESSION-02 | Histórico | Listagem por atividade, criação com mensagem inicial opcional, reabertura com mensagens/parts/status, contexto por sessão e validação de usuário local/workspace. Abrir/enviar/retomar renova atividade. | `S/routes/sessions.ts`, `S/services/message-service.ts`, `S/services/session-lifecycle.ts` | em andamento | `S/routes/sessions.test.ts`, `S/services/session-lifecycle.test.ts`, `D/database.integration.test.ts` |
+| SESSION-03 | Leases | Exclusão entre processos no SQLite por sessão, owner aleatório, heartbeat de 5 s e expiração de 30 s; perda encerra execução, fechamento libera lease. Locks em memória continuam distintos. | `S/services/session-lease.ts`, `S/index.ts` | em andamento | `S/services/workspace-sessions.test.ts`, `S/launcher.test.ts`, `D/database.integration.test.ts` |
+| SESSION-04 | Retenção | Padrão 90 dias, configurável e desativável com zero; aviso e carência mínima de 24 h; abrir cancela aviso. Limpeza horária não sobreposta, preserva leases ativos/gerações e remove artefatos. | `S/services/session-lifecycle.ts` | em andamento | `S/services/session-lifecycle.test.ts`, `S/services/workspace-sessions.test.ts`, `D/database.integration.test.ts` |
+| RECOVER-01 | Journal durável | ASSISTANT começa IN_PROGRESS; journal serializa chamadas/resultados e grava antes de efeitos e antes de devolver resultados ao modelo. Órfãs viram INTERRUPTED sem afetar leases vivos de outro processo. | `S/services/generation-journal.ts`, `S/services/stream-service.ts` | em andamento | `S/services/generation-journal.test.ts`, `S/services/stream-service.test.ts` |
 | RECOVER-02 | Retomada | Retomar USER pendente ou ASSISTANT interrompido com confirmação explícita na CUI; preservar generationId e resultados anteriores; bloquear replay de ações já iniciadas, inclusive efeito desconhecido sem resultado. | `S/services/chat-service.ts`, `S/services/generation-journal.ts`, `C/hooks/use-chat.ts`, `C/components/resume-panel.tsx` | pendente | `S/services/chat-recovery.test.ts`, `S/services/generation-journal.test.ts`, `S/services/stream-service.test.ts`, `C/components/resume-panel.test.tsx` |
-| CTX-01 | Histórico estruturado | Reconstruir pares chamada/resultado e texto; chamadas incompletas viram avisos. Omitir reasoning de novos turnos, preservar metadados necessários durante geração viva. Histórico completo continua persistido. | `S/services/message-format.ts`, `S/services/session-context.ts`, `S/services/context-summary.ts` | pendente | `S/services/message-format.test.ts`, `S/services/session-context.test.ts` |
+| CTX-01 | Histórico estruturado | Reconstruir pares chamada/resultado e texto; chamadas incompletas viram avisos. Omitir reasoning de novos turnos, preservar metadados necessários durante geração viva. Histórico completo continua persistido. | `S/services/message-format.ts`, `S/services/session-context.ts`, `S/services/context-summary.ts` | em andamento | `S/services/message-format.test.ts`, `S/services/session-context.test.ts` |
 | CTX-02 | Janela do modelo | Resolver override, catálogo exato, snapshot datado, hint do provider e fallback local/cloud com origem/estimativa explícitas; preferências persistidas, validação de valores e catálogo sem corrupção silenciosa. | `S/lib/context-window.ts`, `S/lib/model-config.ts`, `H/models.ts` | pendente | `S/lib/model-context.test.ts`, `S/lib/private-config.test.ts`, `S/services/context-plan.test.ts`, `H/schemas.test.ts` |
 | CTX-03 | Orçamento | Reservar sistema, schemas, opções do provider e saída; perfil essencial para janelas pequenas; validar e persistir snapshot antes de cada etapa e entregar ao modelo o snapshot retornado. Falha de persistência impede inferência. | `S/services/context-plan.ts`, `S/services/session-context.ts`, `S/services/stream-service.ts` | pendente | `S/services/context-plan.test.ts`, `S/services/context-plan.integration.test.ts`, `S/services/session-context.test.ts`, `S/services/stream-service.test.ts` |
 | CTX-04 | Compactação | Ao atingir limiar de 70%, resumir evidência antiga e preservar turnos recentes; manter pares completos, abreviar só com indicação, read_file somente no fim de linhas; usuário atual grande demais é rejeitado, sem corte silencioso. | `S/services/session-context.ts`, `S/services/context-summary.ts` | pendente | `S/services/session-context.test.ts`, `S/services/context-plan.integration.test.ts` |
@@ -126,7 +126,7 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | AI-06 | Credenciais ChatGPT | Armazenamento privado/atômico, refresh serializado e cancelável; troca de conta interrompe geração; falha de grant invalida apenas conta afetada; não fallback para API key nem retry automático de inferência. Nenhum arquivo real de credenciais foi aberto. | `S/lib/chatgpt.ts`, `S/lib/chatgpt-store.ts`, `S/lib/providers/chatgpt.ts` | pendente | `S/lib/chatgpt.test.ts`, `S/lib/providers/chatgpt.test.ts` |
 | AI-07 | Stream ChatGPT | Modelos descobertos por conta com IDs chatgpt:, instruções developer e tools no namespace do provider; validação de conclusão SSE, UTF-8 fragmentado e respostas JSON/HTML/incompletas/oversized com erros sanitizados. | `S/lib/providers/chatgpt.ts`, `S/lib/providers/chatgpt-stream.ts`, `S/lib/chatgpt.ts` | pendente | `S/lib/providers/chatgpt.test.ts`, `S/lib/chatgpt.test.ts` |
 | MODEL-01 | Registry | Catálogo compartilhado de IDs/provider/pricing/contexto, default claude-opus-4-6; adição de modelos customizados, detecção de configuração e rejeição de duplicatas/IDs ChatGPT manuais. | `H/models.ts`, `S/lib/model-registry.ts`, `S/lib/model-config.ts`, `S/routes/models.ts` | pendente | `H/schemas.test.ts`, `S/lib/config.test.ts`, `S/lib/model-context.test.ts`, `S/lib/private-config.test.ts`, `C/dialogs/models-dialog.test.tsx` |
-| CONFIG-01 | Configuração global | Diretório global estável, override de home e alias legado; ambiente prevalece sobre config; chave com nome determinístico por modelo, atualização atômica preservando outros valores; JSON inválido gera erro e não é apagado. | `H/home.ts`, `S/lib/env.ts`, `S/lib/private-config.ts`, `S/lib/model-config.ts` | pendente | `S/lib/config.test.ts`, `S/lib/private-config.test.ts`, `S/lib/chatgpt.test.ts` |
+| CONFIG-01 | Configuração global | Diretório global estável, override de home e alias legado; ambiente prevalece sobre config; chave com nome determinístico por modelo, atualização atômica preservando outros valores; JSON inválido gera erro e não é apagado. | `H/home.ts`, `S/lib/env.ts`, `S/lib/private-config.ts`, `S/lib/model-config.ts` | em andamento | `S/lib/config.test.ts`, `S/lib/private-config.test.ts`, `S/lib/chatgpt.test.ts` |
 
 ## CLI, TUI e API local
 
@@ -410,3 +410,114 @@ CI remoto. A importação de dados fica para uma etapa posterior; clap/serde
 entram no M1. Nenhum banco, provider, ferramenta executável, TUI ou modo Learn
 foi implementado e nenhuma credencial real foi acessada. Mensagem de commit
 proposta: `chore: define architecture and scaffold workspace`.
+
+## M1 — Tipos compartilhados e persistência
+
+**Estado: implementação e testes locais concluídos em 20/10/2026;
+aguardando autorização de commit, push/PR e resultado do CI.**
+
+Referências: `packages/shared/src/schemas.ts`, schema Prisma, enums e
+migrations em `packages/database`, message-service/message-format,
+session-lifecycle e session-lease. O código do legado foi somente lido;
+nenhum banco, credencial ou teste legado foi aberto/executado.
+
+| Entrega | Implementação Rust | Testes portados/equivalentes | Status |
+| --- | --- | --- | --- |
+| Session, Message, Mode, status, parts e eventos | protocol; serde, validação de borda, limites e contadores opcionais | protocol/tests/contracts.rs; H/schemas.test.ts e S/services/message-format.test.ts | feito |
+| SessionContext e SessionLease | protocol; JSON com metadados, datas em milissegundos, duração em segundos | contracts.rs e store/tests/persistence.rs; D/database.integration.test.ts | feito |
+| SQLite e migrations | store e três migrations embutidas; WAL, timeout 5000 ms, FK, IMMEDIATE/user_version | store/src/migrations.rs e persistence.rs; D/migrations.test.ts | feito |
+| Sessões por workspace | criar/listar/abrir, caminho canônico, chave em minúsculas no Windows | persistence.rs; S/services/workspace-sessions.test.ts e S/routes/sessions.test.ts | feito |
+| Mensagens incrementais | IN_PROGRESS antes dos deltas; parts e texto duráveis; associação de tools por ID/nome | persistence.rs; S/services/message-format.test.ts e S/services/generation-journal.test.ts | feito |
+| Exclusão entre processos | lease atômico, heartbeat 5 s, TTL 30 s, owner aleatório e liberação condicional | persistence.rs, incluindo outro processo e heartbeat real; workspace-sessions/database.integration | feito |
+| Retenção | 90 dias/zero desativa, aviso durável, 24 h, abertura cancela; protege gerações/leases/mensagens recentes | persistence.rs; S/services/session-lifecycle.test.ts | feito |
+| Home independente do banco legado | MYAGENT_HOME > MYAGENT_CONFIG_DIR > perfil/.myagent; somente myagent-rust.sqlite3 | config.rs e persistence.rs; H/home.ts e S/lib/config.test.ts | feito |
+| CLI | ajuda/versão portadas para clap sem abrir banco | três testes de integração existentes da CLI | feito |
+
+Contratos, fronteiras e justificativas de crates:
+[Persistência M1](persistence.md). O ADR recebeu uma adenda sobre o arquivo
+Rust independente no home solicitado. Não houve importação nem acesso ao
+myagent.db ou ao home real durante os testes.
+
+As linhas gerais GEN-01, SESSION-01/02/03/04, RECOVER-01, CTX-01 e CONFIG-01
+continuam em andamento quando incluem comportamento além do M1: descoberta
+da raiz Git, seleção automática na CLI, apresentação de avisos na TUI,
+cancelamento da geração quando perde lease, recuperação de órfãs, reconstrução
+de contexto e limpeza de futuros artefatos. Os tipos e os serviços de
+armazenamento não comprovam esses fluxos. Learn permanece ausente.
+
+### Validação executada
+
+Ambiente Windows/MSVC, Rust 1.99.1 fixado, CARGO_HOME=.cargo-cache/,
+CARGO_TARGET_DIR=target/m1-validation, dependências do lockfile em modo offline:
+
+| Comando | Resultado |
+| --- | --- |
+| cargo fmt --check | Passou. |
+| cargo check --locked --workspace --all-targets --offline | Compilou; a primeira execução apontou retorno de set_limit não tratado, corrigido antes do Clippy final. |
+| cargo clippy --locked --workspace --all-targets --offline -- -D warnings | Passou após as correções. |
+| cargo test --locked --workspace --offline | Passou: 24 testes, zero falhas e zero ignorados. |
+| cargo metadata --locked --format-version 1 --offline | Passou; dependências e licenças declaradas inspecionadas. |
+| git diff --check | Passou para arquivos rastreados. |
+
+Distribuição: CLI 3, contratos 5, configuração/migrations 4, persistência 12.
+Os demais targets e doc-tests não têm testes de features do agente.
+Foram exercitados Unicode/CRLF, tags e validação, SQLite real, reabertura,
+contexto com metadados, journal incremental, rollback/idempotência/upgrade,
+cascatas, lease em dois processos, expiração/perda/liberação, heartbeat de
+5 s, retenção com carência/cancelamento e recusa de hard links/junctions.
+O caso de symlink Unix será executado pelo CI nas plataformas correspondentes.
+
+A tentativa anterior de fetch falhou por rede; o usuário resolveu em seu
+terminal, gerou o lockfile e criou feat/m1-store. A primeira tentativa de
+testes neste fechamento encontrou LNK1104 ao abrir um executável existente
+em target/debug. Uma saída de build nova em target/m1-validation resolveu
+essa falha de ambiente, sem remover artefatos existentes.
+
+A execução revelou duas correções de código/teste: tratar o Result de
+Connection::set_limit e manter a orientação --help em erros da CLI.
+A fixture de retenção na reabertura foi ajustada para ativar a política
+que o próprio teste verifica. Depois dessas correções, a suíte completa
+passou. A checagem auxiliar anterior de SQL em Python/SQLite 3.50.4 não foi
+usada como substituta dos testes Rust.
+
+O CI já está configurado para Windows/Linux/macOS e ainda não foi publicado
+ou executado para este M1. Não foram feitas chamadas de IA, Docker, importação
+de banco, leitura de segredos, publicação npm ou criação de tag.
+cargo-deny não foi executado; a licença Zlib de foldhash 0.2 foi revisada
+localmente e permitida no deny.toml pela dependência transitiva do rusqlite.
+
+### Git e proposta de entrega
+
+Branch confirmada: feat/m1-store. Nenhum commit, push ou PR executado pelo
+assistente nesta etapa. A revisão do staged e o resultado da preparação
+serão registrados no fechamento. Mensagem proposta:
+
+`feat: add shared types and SQLite persistence`
+
+Arquivos para o commit:
+
+- Cargo.toml e Cargo.lock
+- CONTRIBUTING.md, README.md e deny.toml
+- crates/cli/Cargo.toml e crates/cli/src/main.rs
+- crates/core/src/lib.rs
+- crates/protocol/Cargo.toml, crates/protocol/src/lib.rs e crates/protocol/tests/contracts.rs
+- crates/store/Cargo.toml e crates/store/src/lib.rs
+- crates/store/src/config.rs, migrations.rs, records.rs e services.rs
+- crates/store/migrations/0001_sessions.sql, 0002_context_leases.sql e 0003_indexes.sql
+- crates/store/tests/persistence.rs
+- docs/PARITY.md, docs/adr/0001-arquitetura.md e docs/persistence.md
+
+### Preparação final do commit
+
+Os três gates finais passaram no Windows com a toolchain fixada 1.99.1:
+fmt --check, Clippy do workspace/all-targets com -D warnings e cargo test
+do workspace (24 aprovados, zero falhas/ignorados). As dependências foram
+resolvidas pelo lockfile e verificadas em modo offline.
+
+A revisão dos 24 arquivos novos/modificados passou para UTF-8/LF, TOML e
+padrões comuns de credenciais, sem encontrar arquivos proibidos. Isso não
+garante detectar todo segredo possível. O git add explícito desses caminhos
+foi recusado ao criar .git/index.lock por falta de permissão. A revisão do
+staged continua obrigatória antes do commit; ele estava vazio na conferência
+final. O usuário precisa preparar o staged no seu terminal. Nenhum commit,
+push, PR ou alteração de remote foi executado.

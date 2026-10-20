@@ -8,7 +8,8 @@ seu texto jurídico original em inglês.
 
 Implemente um milestone por vez, em passos verificáveis. Confirme comportamentos
 no código do legado, que é somente leitura, e atualize [docs/PARITY.md](docs/PARITY.md).
-Justifique cada crate por uma necessidade concreta. O bootstrap não usa crates externos.
+Justifique cada crate por uma necessidade concreta. As dependências do M1 estão
+justificadas em [Persistência M1](docs/persistence.md).
 Prefira `#![forbid(unsafe_code)]`; qualquer exceção exige justificativa documentada.
 
 ## Verificação

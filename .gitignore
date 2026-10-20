@@ -1,0 +1,44 @@
+# Rust: versionar Cargo.lock para builds reproduzíveis do aplicativo.
+/target/
+**/*.rs.bk
+
+# Referências locais e artefatos do legado.
+/reference/
+node_modules/
+dist/
+.myagent/
+logs/
+evals/results/
+
+# Segredos, credenciais e bancos locais.
+.env*
+!.env.example
+config.env
+chatgpt-credentials.json
+api-token
+*.log
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+.aws/
+.ssh/
+.gnupg/
+.azure/
+.kube/
+
+# Editor e sistema operacional.
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini

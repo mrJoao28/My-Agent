@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feat/**', 'fix/**', 'chore/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+      - name: Instalar toolchain fixada
+        shell: bash
+        run: |
+          version=$(sed -n 's/^channel = "\([^"]*\)"/\1/p' rust-toolchain.toml)
+          test -n "$version"
+          rustup toolchain install "$version" --profile minimal --component rustfmt --component clippy
+      - name: Conferir formatação
+        run: cargo fmt --check
+      - name: Executar Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Executar testes
+        run: cargo test --locked

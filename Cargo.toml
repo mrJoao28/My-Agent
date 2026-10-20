@@ -1,0 +1,11 @@
+[package]
+name = "my-agent"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99.1"
+license = "MIT"
+description = "Assistente de programação de terminal em Rust"
+repository = "https://github.com/mrJoao28/My-Agent"
+publish = false
+
+[dependencies]

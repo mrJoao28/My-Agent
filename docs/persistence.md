@@ -121,3 +121,11 @@ real, retenção e links/junctions por plataforma. No fechamento local do M1,
 os 24 testes passaram no Windows, sem falhas ou ignorados. O teste Unix de
 symlink e as demais plataformas aguardam o CI. Resultados e limitações
 estão registrados em [PARITY.md](PARITY.md).
+
+## Integração M2
+
+StoreJournal implementa as portas síncronas do core, que usa spawn_blocking.
+Recuperação respeita leases/workspaces, retomadas preservam generationId e
+usage é atualizado durante a geração. Contexto com signatures é salvo antes
+de efeitos; ao iniciar novo turno, reasoning antigo não é reintroduzido.
+Detalhes e testes em [Gerações M2](generations.md).

@@ -6,12 +6,18 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish.workspace = true
-description = "Futuro registro seguro de ferramentas do My-Agent."
+description = "Adapters seguros de ferramentas e instruções de projeto do My-Agent."
 
 [dependencies]
 myagent-core.workspace = true
 myagent-protocol.workspace = true
 myagent-sandbox.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+winapi-util = "0.1"
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

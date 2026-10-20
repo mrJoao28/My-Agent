@@ -1,3 +1,4 @@
 #![forbid(unsafe_code)]
-
-//! Futuras primitivas de confinamento e execução Docker.
+//! Primitivas de supervisão. Criar containers e autorizar execução ficam no adapter Docker.
+mod process;
+pub use process::{ProcessError, ProcessOutput, supervise_child};

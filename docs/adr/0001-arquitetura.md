@@ -321,3 +321,17 @@ o futuro adapter async deverá evitar bloquear o executor. O protocolo não
 contém tipos SQLite/runtime. Após o fetch e a geração do lockfile pelo
 usuário, a compilação e os 24 testes do M1 passaram no Windows. Os gates
 e as limitações do fechamento estão registrados em PARITY.md.
+
+## Adenda M2 — providers e geração
+
+As portas assíncronas ficam no core, os codecs HTTP nos providers e a ponte
+SQLite em StoreJournal. O grafo permanece sem ciclos. Tokio, tokio-util e
+reqwest/rustls entram por necessidade concreta de streaming, cancelamento,
+canais, timers e supervisão de processos. As demais crates já existentes
+são reutilizadas; não há SDK de LLM com execução automática de ferramentas.
+
+As opções de provider e o catálogo seguem o legado. Os testes usam fakes,
+loopback e fixtures; APIs pagas e credenciais reais não são usadas.
+Detalhes, justificativas de dependências e limites estão em
+[Gerações M2](../generations.md). A CLI/TUI, ferramentas concretas, Docker e
+plano ChatGPT permanecem nos seus milestones. Learn não foi implementado.

@@ -297,6 +297,18 @@ impl Store {
         model: &str,
         mode: Mode,
     ) -> Result<Message> {
+        self.begin_assistant_generation(workspace, session_id, model, mode, None)
+    }
+
+    pub fn begin_assistant_generation(
+        &self,
+        workspace: &Workspace,
+        session_id: &str,
+        model: &str,
+        mode: Mode,
+        generation_id: Option<&str>,
+    ) -> Result<Message> {
+        let generation_id = generation_id.map(Self::checked_session_id).transpose()?;
         let session_id = Self::checked_session_id(session_id)?;
         let workspace = workspace.clone();
         let model = model.to_owned();
@@ -310,7 +322,7 @@ impl Store {
             no_generation(&tx, &session_id)?;
             let id = identifier(&tx)?;
             let message = Message {
-                generation_id: Some(id.clone()),
+                generation_id: Some(generation_id.unwrap_or_else(|| id.clone())),
                 id,
                 session_id,
                 role: Role::Assistant,
@@ -379,7 +391,7 @@ impl Store {
             if let MessagePart::Text { text } = &part {
                 message.content.push_str(text);
             }
-            message.parts.push(part);
+            myagent_core::context::push_part(&mut message.parts,part);
             Ok(())
         })
     }

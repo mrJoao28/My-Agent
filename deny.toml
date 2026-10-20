@@ -4,7 +4,8 @@ ignore = []
 
 [licenses]
 # Zlib: foldhash 0.2, dependência transitiva de hashbrown/hashlink/rusqlite.
-allow = ["MIT", "Apache-2.0", "Unicode-3.0", "Zlib"]
+# TLS: ISC (ring/webpki/untrusted), BSD-3-Clause (subtle), CDLA-Permissive-2.0 (webpki-roots).
+allow = ["MIT", "Apache-2.0", "Unicode-3.0", "Zlib", "ISC", "BSD-3-Clause", "CDLA-Permissive-2.0"]
 confidence-threshold = 0.8
 
 [bans]

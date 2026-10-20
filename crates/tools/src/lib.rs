@@ -1,3 +1,4 @@
 #![forbid(unsafe_code)]
-
-//! Futuro registro seguro de ferramentas do My-Agent.
+//! Adapters de fronteira; nenhuma ferramenta executável registrada automaticamente.
+mod instructions;
+pub use instructions::FilesystemInstructions;

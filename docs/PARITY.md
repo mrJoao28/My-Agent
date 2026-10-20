@@ -41,16 +41,16 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 
 | ID | Área | Funcionalidade confirmada no código | Onde está no legado | Status | Testes legados correspondentes |
 | --- | --- | --- | --- | --- | --- |
-| MODE-01 | PLAN/BUILD | PLAN recebe apenas ferramentas sem mutação do projeto; BUILD acrescenta escrita, shell e Git de alteração. A lista e a política no backend garantem a restrição. | `S/tools/index.ts`, `S/security/permissions.ts` | pendente | `S/security/permissions.test.ts`, `S/security/docker-availability.test.ts` |
+| MODE-01 | PLAN/BUILD | PLAN recebe apenas ferramentas sem mutação do projeto; BUILD acrescenta escrita, shell e Git de alteração. A lista e a política no backend garantem a restrição. | `S/tools/index.ts`, `S/security/permissions.ts` | em andamento | `S/security/permissions.test.ts`, `S/security/docker-availability.test.ts` |
 | MODE-02 | PLAN/BUILD | CUI inicia em BUILD, isola modo por sessão e restaura o último modo persistido; modelo selecionado é compartilhado. Modo em execução permanece distinguível da próxima mensagem. `exec` inicia em PLAN. | `C/providers/prompt-config/index.tsx`, `C/screens/session.tsx`, `C/components/session-shell.tsx`, `M/options.ts` | pendente | `C/dialogs/agents-dialog.test.tsx`, `C/components/session-shell.test.tsx`, `M/options.test.ts`, `M/exec.test.ts` |
 | PROMPT-01 | Prompts | Builder por modo, workspace, ferramentas efetivamente disponíveis e sandbox; seis blocos de instruções; perfis compacto/completo. Não anunciar capacidades indisponíveis nem tratar texto externo como permissão. | `S/prompts/index.ts`, `S/prompts/system.ts`, `S/prompts/coding.ts`, `S/prompts/editing.ts`, `S/prompts/tool-rules.ts`, `S/services/context-plan.ts` | pendente | `S/prompts/prompts.test.ts`, `S/services/context-plan.test.ts`, `S/services/message-format.test.ts` |
 | PERM-01 | Aprovações | Y permite uma vez, A memoriza por sessão/ferramenta/workspace/escopo, N nega. Enter não aprova; Esc/Ctrl+C interrompem. Prévia rolável de diff, caminho, comando ou URL. | `S/security/permissions.ts`, `S/security/approval-scope.ts`, `S/security/tool-policy.ts`, `C/components/approval-panel.tsx`, `C/components/approval-preview.ts` | pendente | `S/security/permissions.test.ts`, `S/security/approval-scope.test.ts`, `C/components/approval-panel.test.tsx` |
 | PERM-02 | Aprovações | Timeout de 120 s, consumo único, isolamento e limpeza ao cancelar/desconectar; até 256 escopos. A é proibido para delete_file, git_commit, git_init, git_remote_add e git_push. Ferramentas desconhecidas são negadas. | `S/security/permissions.ts`, `H/schemas.ts` | pendente | `S/security/permissions.test.ts`, `S/security/approval-scope.test.ts`, `H/schemas.test.ts` |
 | PERM-03 | Automação | `none` autoriza leitura local; `reads` acrescenta web; `all` autoriza ações. Push exige opção separada e não autoaprova main/master. Comandos continuam dependentes de Docker e do modo. | `S/security/permissions.ts`, `M/options.ts`, `M/exec.ts` | pendente | `M/exec.test.ts`, `S/tools/git-workflow.test.ts`, `S/tools/test-tools.test.ts` |
 | GEN-01 | Streaming | Texto, reasoning, chamadas/resultados associados por ID, avisos, uso e estados terminais estruturados; contratos validados; UTF-8/CRLF fragmentados e EOF sem done não equivalem a sucesso. | `H/schemas.ts`, `S/services/stream-service.ts`, `C/lib/chat-events.ts`, `C/hooks/use-chat.ts`, `M/exec.ts` | em andamento | `H/schemas.test.ts`, `S/services/stream-service.test.ts`, `C/lib/chat-events.test.ts`, `C/hooks/use-chat.test.tsx`, `M/exec.test.ts` |
-| GEN-02 | Ciclo da geração | Uma geração ativa por sessão; lock antes de awaits; diferenciar erro, conclusão e interrupção; persistir parciais, propagar cancelamento e aguardar cleanup no encerramento. Falha no SSE terminal não duplica gravação. | `S/services/chat-service.ts`, `S/services/stream-service.ts`, `S/index.ts` | pendente | `S/services/chat-recovery.test.ts`, `S/services/stream-service.test.ts`, `S/launcher.test.ts` |
-| GEN-03 | Limites de tools | Orçamento padrão 40 chamadas, configurável até 200, verificado antes do executor; aviso perto do limite; timeout global de 5 min. Argumentos equivalentes são canonizados; resultado visível evita repetição; repetição persistente interrompe. | `S/services/tool-service.ts`, `S/services/stream-service.ts` | pendente | `S/services/tool-service.test.ts`, `S/services/tool-guard.test.ts`, `S/services/stream-service.test.ts` |
-| GEN-04 | Evidência no contexto | Releituras voltam a ser permitidas quando evidência é removida/abreviada; edição invalida leitura anterior; nota de undo invalida evidências sem ampliar permissões ou orçamento. | `S/services/tool-service.ts`, `S/services/session-context.ts` | pendente | `S/services/tool-guard.test.ts`, `S/services/stream-service.test.ts`, `S/services/session-context.test.ts` |
+| GEN-02 | Ciclo da geração | Uma geração ativa por sessão; lock antes de awaits; diferenciar erro, conclusão e interrupção; persistir parciais, propagar cancelamento e aguardar cleanup no encerramento. Falha no SSE terminal não duplica gravação. | `S/services/chat-service.ts`, `S/services/stream-service.ts`, `S/index.ts` | em andamento | `S/services/chat-recovery.test.ts`, `S/services/stream-service.test.ts`, `S/launcher.test.ts` |
+| GEN-03 | Limites de tools | Orçamento padrão 40 chamadas, configurável até 200, verificado antes do executor; aviso perto do limite; timeout global de 5 min. Argumentos equivalentes são canonizados; resultado visível evita repetição; repetição persistente interrompe. | `S/services/tool-service.ts`, `S/services/stream-service.ts` | feito | `S/services/tool-service.test.ts`, `S/services/tool-guard.test.ts`, `S/services/stream-service.test.ts` |
+| GEN-04 | Evidência no contexto | Releituras voltam a ser permitidas quando evidência é removida/abreviada; edição invalida leitura anterior; nota de undo invalida evidências sem ampliar permissões ou orçamento. | `S/services/tool-service.ts`, `S/services/session-context.ts` | feito | `S/services/tool-guard.test.ts`, `S/services/stream-service.test.ts`, `S/services/session-context.test.ts` |
 | TASK-01 | Tarefas | `todo_write` mantém itens e status em memória, separados por sessão, com limpeza; não é plano de execução durável nem coordenação de múltiplos agentes. | `S/tools/todo-write.ts`, `S/services/session-lifecycle.ts` | pendente | `S/tools/files.test.ts`, `S/services/session-lifecycle.test.ts` |
 
 ## Ferramentas de arquivos, inspeção e processos
@@ -104,28 +104,28 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | SESSION-02 | Histórico | Listagem por atividade, criação com mensagem inicial opcional, reabertura com mensagens/parts/status, contexto por sessão e validação de usuário local/workspace. Abrir/enviar/retomar renova atividade. | `S/routes/sessions.ts`, `S/services/message-service.ts`, `S/services/session-lifecycle.ts` | em andamento | `S/routes/sessions.test.ts`, `S/services/session-lifecycle.test.ts`, `D/database.integration.test.ts` |
 | SESSION-03 | Leases | Exclusão entre processos no SQLite por sessão, owner aleatório, heartbeat de 5 s e expiração de 30 s; perda encerra execução, fechamento libera lease. Locks em memória continuam distintos. | `S/services/session-lease.ts`, `S/index.ts` | em andamento | `S/services/workspace-sessions.test.ts`, `S/launcher.test.ts`, `D/database.integration.test.ts` |
 | SESSION-04 | Retenção | Padrão 90 dias, configurável e desativável com zero; aviso e carência mínima de 24 h; abrir cancela aviso. Limpeza horária não sobreposta, preserva leases ativos/gerações e remove artefatos. | `S/services/session-lifecycle.ts` | em andamento | `S/services/session-lifecycle.test.ts`, `S/services/workspace-sessions.test.ts`, `D/database.integration.test.ts` |
-| RECOVER-01 | Journal durável | ASSISTANT começa IN_PROGRESS; journal serializa chamadas/resultados e grava antes de efeitos e antes de devolver resultados ao modelo. Órfãs viram INTERRUPTED sem afetar leases vivos de outro processo. | `S/services/generation-journal.ts`, `S/services/stream-service.ts` | em andamento | `S/services/generation-journal.test.ts`, `S/services/stream-service.test.ts` |
-| RECOVER-02 | Retomada | Retomar USER pendente ou ASSISTANT interrompido com confirmação explícita na CUI; preservar generationId e resultados anteriores; bloquear replay de ações já iniciadas, inclusive efeito desconhecido sem resultado. | `S/services/chat-service.ts`, `S/services/generation-journal.ts`, `C/hooks/use-chat.ts`, `C/components/resume-panel.tsx` | pendente | `S/services/chat-recovery.test.ts`, `S/services/generation-journal.test.ts`, `S/services/stream-service.test.ts`, `C/components/resume-panel.test.tsx` |
-| CTX-01 | Histórico estruturado | Reconstruir pares chamada/resultado e texto; chamadas incompletas viram avisos. Omitir reasoning de novos turnos, preservar metadados necessários durante geração viva. Histórico completo continua persistido. | `S/services/message-format.ts`, `S/services/session-context.ts`, `S/services/context-summary.ts` | em andamento | `S/services/message-format.test.ts`, `S/services/session-context.test.ts` |
-| CTX-02 | Janela do modelo | Resolver override, catálogo exato, snapshot datado, hint do provider e fallback local/cloud com origem/estimativa explícitas; preferências persistidas, validação de valores e catálogo sem corrupção silenciosa. | `S/lib/context-window.ts`, `S/lib/model-config.ts`, `H/models.ts` | pendente | `S/lib/model-context.test.ts`, `S/lib/private-config.test.ts`, `S/services/context-plan.test.ts`, `H/schemas.test.ts` |
-| CTX-03 | Orçamento | Reservar sistema, schemas, opções do provider e saída; perfil essencial para janelas pequenas; validar e persistir snapshot antes de cada etapa e entregar ao modelo o snapshot retornado. Falha de persistência impede inferência. | `S/services/context-plan.ts`, `S/services/session-context.ts`, `S/services/stream-service.ts` | pendente | `S/services/context-plan.test.ts`, `S/services/context-plan.integration.test.ts`, `S/services/session-context.test.ts`, `S/services/stream-service.test.ts` |
-| CTX-04 | Compactação | Ao atingir limiar de 70%, resumir evidência antiga e preservar turnos recentes; manter pares completos, abreviar só com indicação, read_file somente no fim de linhas; usuário atual grande demais é rejeitado, sem corte silencioso. | `S/services/session-context.ts`, `S/services/context-summary.ts` | pendente | `S/services/session-context.test.ts`, `S/services/context-plan.integration.test.ts` |
-| USAGE-01 | Tokens consumidos | Acumular uso válido informado em cada etapa uma vez, persistir por mensagem inclusive em erro/interrupção e restaurar na sessão. Ausência de uso não vira estimativa nem zero fictício. | `S/services/stream-service.ts`, `C/hooks/use-chat.ts`, `C/lib/token-usage.ts`, `C/components/token-usage-bar.tsx` | pendente | `S/services/stream-service.test.ts`, `C/lib/token-usage.test.ts`, `C/components/token-usage-bar.test.tsx`, `C/hooks/use-chat.test.tsx` |
-| AGENTS-01 | Instruções de projeto | AGENTS.md raiz a cada geração, subpastas conforme arquivos lidos/buscados/editados; precedência por escopo, irmãos isolados, cache imutável por geração e entrega única. | `S/lib/project-instructions.ts`, `S/services/context-plan.ts`, `S/tools/index.ts` | pendente | `S/lib/project-instructions.test.ts`, `S/services/stream-service.test.ts` |
-| AGENTS-02 | Segurança das instruções | Limite total de 16 KiB incluindo envelope JSON/Unicode, 128 candidatos e profundidade 32; recusar links/binários/caminhos sensíveis; I/O somente após autorização. Instruções nunca ampliam permissões nem geram documentação automaticamente. | `S/lib/project-instructions.ts`, `S/security/tool-policy.ts` | pendente | `S/lib/project-instructions.test.ts`, `S/prompts/prompts.test.ts` |
+| RECOVER-01 | Journal durável | ASSISTANT começa IN_PROGRESS; journal serializa chamadas/resultados e grava antes de efeitos e antes de devolver resultados ao modelo. Órfãs viram INTERRUPTED sem afetar leases vivos de outro processo. | `S/services/generation-journal.ts`, `S/services/stream-service.ts` | feito | `S/services/generation-journal.test.ts`, `S/services/stream-service.test.ts` |
+| RECOVER-02 | Retomada | Retomar USER pendente ou ASSISTANT interrompido com confirmação explícita na CUI; preservar generationId e resultados anteriores; bloquear replay de ações já iniciadas, inclusive efeito desconhecido sem resultado. | `S/services/chat-service.ts`, `S/services/generation-journal.ts`, `C/hooks/use-chat.ts`, `C/components/resume-panel.tsx` | em andamento | `S/services/chat-recovery.test.ts`, `S/services/generation-journal.test.ts`, `S/services/stream-service.test.ts`, `C/components/resume-panel.test.tsx` |
+| CTX-01 | Histórico estruturado | Reconstruir pares chamada/resultado e texto; chamadas incompletas viram avisos. Omitir reasoning de novos turnos, preservar metadados necessários durante geração viva. Histórico completo continua persistido. | `S/services/message-format.ts`, `S/services/session-context.ts`, `S/services/context-summary.ts` | feito | `S/services/message-format.test.ts`, `S/services/session-context.test.ts` |
+| CTX-02 | Janela do modelo | Resolver override, catálogo exato, snapshot datado, hint do provider e fallback local/cloud com origem/estimativa explícitas; preferências persistidas, validação de valores e catálogo sem corrupção silenciosa. | `S/lib/context-window.ts`, `S/lib/model-config.ts`, `H/models.ts` | em andamento | `S/lib/model-context.test.ts`, `S/lib/private-config.test.ts`, `S/services/context-plan.test.ts`, `H/schemas.test.ts` |
+| CTX-03 | Orçamento | Reservar sistema, schemas, opções do provider e saída; perfil essencial para janelas pequenas; validar e persistir snapshot antes de cada etapa e entregar ao modelo o snapshot retornado. Falha de persistência impede inferência. | `S/services/context-plan.ts`, `S/services/session-context.ts`, `S/services/stream-service.ts` | feito | `S/services/context-plan.test.ts`, `S/services/context-plan.integration.test.ts`, `S/services/session-context.test.ts`, `S/services/stream-service.test.ts` |
+| CTX-04 | Compactação | Ao atingir limiar de 70%, resumir evidência antiga e preservar turnos recentes; manter pares completos, abreviar só com indicação, read_file somente no fim de linhas; usuário atual grande demais é rejeitado, sem corte silencioso. | `S/services/session-context.ts`, `S/services/context-summary.ts` | feito | `S/services/session-context.test.ts`, `S/services/context-plan.integration.test.ts` |
+| USAGE-01 | Tokens consumidos | Acumular uso válido informado em cada etapa uma vez, persistir por mensagem inclusive em erro/interrupção e restaurar na sessão. Ausência de uso não vira estimativa nem zero fictício. | `S/services/stream-service.ts`, `C/hooks/use-chat.ts`, `C/lib/token-usage.ts`, `C/components/token-usage-bar.tsx` | em andamento | `S/services/stream-service.test.ts`, `C/lib/token-usage.test.ts`, `C/components/token-usage-bar.test.tsx`, `C/hooks/use-chat.test.tsx` |
+| AGENTS-01 | Instruções de projeto | AGENTS.md raiz a cada geração, subpastas conforme arquivos lidos/buscados/editados; precedência por escopo, irmãos isolados, cache imutável por geração e entrega única. | `S/lib/project-instructions.ts`, `S/services/context-plan.ts`, `S/tools/index.ts` | em andamento | `S/lib/project-instructions.test.ts`, `S/services/stream-service.test.ts` |
+| AGENTS-02 | Segurança das instruções | Limite total de 16 KiB incluindo envelope JSON/Unicode, 128 candidatos e profundidade 32; recusar links/binários/caminhos sensíveis; I/O somente após autorização. Instruções nunca ampliam permissões nem geram documentação automaticamente. | `S/lib/project-instructions.ts`, `S/security/tool-policy.ts` | feito | `S/lib/project-instructions.test.ts`, `S/prompts/prompts.test.ts` |
 
 ## Providers, modelos e configuração
 
 | ID | Área | Funcionalidade confirmada no código | Onde está no legado | Status | Testes legados correspondentes |
 | --- | --- | --- | --- | --- | --- |
-| AI-01 | Anthropic | Resolver modelo configurado, chave por modelo e opções de thinking do catálogo. | `S/lib/providers/anthropic.ts`, `S/lib/providers/resolver.ts` | pendente | `S/lib/config.test.ts`, `S/services/context-plan.test.ts`; sem teste dedicado do adapter Anthropic identificado |
-| AI-02 | OpenAI | Adapter OpenAI e opções de reasoning por modelo; resolução explícita, falha por modelo/chave ausente. | `S/lib/providers/openai.ts`, `S/lib/providers/resolver.ts` | pendente | `S/lib/config.test.ts`, `S/services/stream-service.test.ts`, `M/exec.test.ts` (provider simulado); sem chamada real validada |
-| AI-03 | Google | Adapter Google com thinkingBudget por modelo, catálogo e chave por modelo. | `S/lib/providers/google.ts`, `S/lib/providers/resolver.ts` | pendente | `S/lib/config.test.ts`, `S/services/context-plan.test.ts`; sem teste dedicado do adapter Google identificado |
-| AI-04 | Ollama | Endpoint compatível com OpenAI Chat Completions, URL/chave opcionais, modelos locais/customizados e janela configurável; não exige chave cloud. | `S/lib/providers/ollama.ts`, `S/lib/providers/resolver.ts` | pendente | `S/lib/config.test.ts`, `S/lib/model-context.test.ts`; sem inferência Ollama real validada |
+| AI-01 | Anthropic | Resolver modelo configurado, chave por modelo e opções de thinking do catálogo. | `S/lib/providers/anthropic.ts`, `S/lib/providers/resolver.ts` | feito | `S/lib/config.test.ts`, `S/services/context-plan.test.ts`; sem teste dedicado do adapter Anthropic identificado |
+| AI-02 | OpenAI | Adapter OpenAI e opções de reasoning por modelo; resolução explícita, falha por modelo/chave ausente. | `S/lib/providers/openai.ts`, `S/lib/providers/resolver.ts` | feito | `S/lib/config.test.ts`, `S/services/stream-service.test.ts`, `M/exec.test.ts` (provider simulado); sem chamada real validada |
+| AI-03 | Google | Adapter Google com thinkingBudget por modelo, catálogo e chave por modelo. | `S/lib/providers/google.ts`, `S/lib/providers/resolver.ts` | feito | `S/lib/config.test.ts`, `S/services/context-plan.test.ts`; sem teste dedicado do adapter Google identificado |
+| AI-04 | Ollama | Endpoint compatível com OpenAI Chat Completions, URL/chave opcionais, modelos locais/customizados e janela configurável; não exige chave cloud. | `S/lib/providers/ollama.ts`, `S/lib/providers/resolver.ts` | feito | `S/lib/config.test.ts`, `S/lib/model-context.test.ts`; sem inferência Ollama real validada |
 | AI-05 | Plano ChatGPT | Login habilitado por padrão, desativação explícita; OAuth com PKCE, callback loopback, state/nonce, identidade assinada e registro de cliente; múltiplas contas, ativação/logout/revogação. | `S/lib/chatgpt.ts`, `S/lib/chatgpt-store.ts`, `S/routes/chatgpt.ts`, `C/dialogs/chatgpt-dialog.tsx` | pendente | `S/lib/chatgpt.test.ts` |
 | AI-06 | Credenciais ChatGPT | Armazenamento privado/atômico, refresh serializado e cancelável; troca de conta interrompe geração; falha de grant invalida apenas conta afetada; não fallback para API key nem retry automático de inferência. Nenhum arquivo real de credenciais foi aberto. | `S/lib/chatgpt.ts`, `S/lib/chatgpt-store.ts`, `S/lib/providers/chatgpt.ts` | pendente | `S/lib/chatgpt.test.ts`, `S/lib/providers/chatgpt.test.ts` |
 | AI-07 | Stream ChatGPT | Modelos descobertos por conta com IDs chatgpt:, instruções developer e tools no namespace do provider; validação de conclusão SSE, UTF-8 fragmentado e respostas JSON/HTML/incompletas/oversized com erros sanitizados. | `S/lib/providers/chatgpt.ts`, `S/lib/providers/chatgpt-stream.ts`, `S/lib/chatgpt.ts` | pendente | `S/lib/providers/chatgpt.test.ts`, `S/lib/chatgpt.test.ts` |
-| MODEL-01 | Registry | Catálogo compartilhado de IDs/provider/pricing/contexto, default claude-opus-4-6; adição de modelos customizados, detecção de configuração e rejeição de duplicatas/IDs ChatGPT manuais. | `H/models.ts`, `S/lib/model-registry.ts`, `S/lib/model-config.ts`, `S/routes/models.ts` | pendente | `H/schemas.test.ts`, `S/lib/config.test.ts`, `S/lib/model-context.test.ts`, `S/lib/private-config.test.ts`, `C/dialogs/models-dialog.test.tsx` |
+| MODEL-01 | Registry | Catálogo compartilhado de IDs/provider/pricing/contexto, default claude-opus-4-6; adição de modelos customizados, detecção de configuração e rejeição de duplicatas/IDs ChatGPT manuais. | `H/models.ts`, `S/lib/model-registry.ts`, `S/lib/model-config.ts`, `S/routes/models.ts` | em andamento | `H/schemas.test.ts`, `S/lib/config.test.ts`, `S/lib/model-context.test.ts`, `S/lib/private-config.test.ts`, `C/dialogs/models-dialog.test.tsx` |
 | CONFIG-01 | Configuração global | Diretório global estável, override de home e alias legado; ambiente prevalece sobre config; chave com nome determinístico por modelo, atualização atômica preservando outros valores; JSON inválido gera erro e não é apagado. | `H/home.ts`, `S/lib/env.ts`, `S/lib/private-config.ts`, `S/lib/model-config.ts` | em andamento | `S/lib/config.test.ts`, `S/lib/private-config.test.ts`, `S/lib/chatgpt.test.ts` |
 
 ## CLI, TUI e API local
@@ -521,3 +521,150 @@ foi recusado ao criar .git/index.lock por falta de permissão. A revisão do
 staged continua obrigatória antes do commit; ele estava vazio na conferência
 final. O usuário precisa preparar o staged no seu terminal. Nenhum commit,
 push, PR ou alteração de remote foi executado.
+
+## M2 — Providers e orquestração de gerações
+
+Implementação preparada no branch **feat/m2-agent**, baseada no commit do M1
+3920dfc. Validação local concluída; aguardando autorização para commit e,
+depois, push/PR e execução do CI remoto. Nenhum commit/push/PR deste M2.
+
+Referências lidas no legado: providers Anthropic/OpenAI/Google/Ollama, resolver
+e registry; model-registry/model-config, shared/models; chat-service,
+stream-service, tool-service, context-plan, context-summary, session-context,
+generation-journal, project-instructions e os módulos/testes de prompts.
+Código prevalece sobre documentação. ChatGPT permanece reservado ao M7.
+Não foram executados testes Bun nem acessados bancos, home privado ou segredos.
+
+| Entrega M2 | Código Rust | Testes equivalentes/adicionais | Situação |
+| --- | --- | --- | --- |
+| Quatro providers e registry | providers/{http,wire,registry,catalog.json} | providers/src/tests.rs: dialetos nativos, catálogo/overrides/env, modelos inválidos e erro sem chave | feito |
+| SSE incremental limitado | providers/sse.rs e http.rs | UTF-8 fragmentado, CRLF/CR/BOM, multiline, limites, status/content-type, EOF, erros e cancelamento em TCP loopback | feito |
+| Modos e prompts únicos | core/{agent,prompts,ports}.rs | core/tests/policy.rs e store/tests/generations.rs: seis blocos e escrita ausente em PLAN inclusive classificação incorreta | feito |
+| Guardas do loop | core/guard.rs | env 40/200, valores inválidos, lote acima do orçamento, três repetições, síntese sem tools e timeout virtual de cinco minutos | feito |
+| Journal integrado | store/journal.rs e services.rs | SQLite real; parciais/usage, chamada persistida antes de efeito, contexto persistido antes da rede, falha impede inferência | feito |
+| Locks, cancelamento e cleanup | core/agent.rs e sandbox/process.rs | concorrência por sessão, cancelamento de HTTP/processo/consumidor, espera por cleanup e perda de lease durante ferramenta longa | feito |
+| Retomada | core/agent.rs e StoreJournal | USER pendente, generationId, orçamento acumulado, replay bloqueado mesmo com efeito desconhecido e preservação de lease estrangeiro | feito |
+| Contexto e tokens | core/{context,tokens}.rs | ordem texto/call/result, orçamento/summary, usuário preservado, linhas/paginação, invalidação por escrita/undo, medições ausentes/cumulativas | feito |
+| Estado específico de provider | wire.rs, SessionContext e StoreJournal | signatures/encrypted reasoning no codec, persistência durante geração e retomada, omissão no novo turno | feito |
+| Instruções do projeto | core/instructions.rs e tools/instructions.rs | raiz/subescopos/cache, budget total de 16 KiB, candidatos, segredo por nome, hard link e junction; symlink Unix no CI | feito |
+
+Detalhes de contratos, configuração, dependências e referências oficiais:
+[Providers e gerações](generations.md).
+
+Diferenças deliberadas em relação ao legado, conforme o pedido:
+valores MYAGENT_MAX_TOOL_CALLS acima de 200 voltam a 40; o legado os limitava
+a 200. A síntese começa com até duas chamadas restantes, inclusive já no
+primeiro passo quando o limite é 1/2. A retomada também conserva orçamento
+e repetições do generationId, para não reabrir permissões ao interromper.
+Ferramentas executam sequencialmente e só depois da conclusão validada do
+stream do provider. O journal permanece incremental.
+
+Os adapters são testados com chaves fictícias e servidores 127.0.0.1, sem
+chamadas pagas nem inferência real. Isso valida contratos simulados, não
+disponibilidade dos modelos ou compatibilidade observada de uma conta real.
+Não houve login, OAuth, refresh, leitura de .env ou credenciais, acesso ao
+myagent.db nem importação automática.
+
+As linhas gerais que incluem UI/CLI/exec, políticas concretas de aprovação,
+ferramentas de projeto, Docker e shutdown da aplicação continuam em andamento
+ou pendentes nos milestones próprios. O núcleo não registra tools de produção
+nem faz shell no host. O supervisor só adota processos já criados/autorizados;
+a futura integração Docker encerrará o container inteiro. Modelos customizados
+podem ser carregados de models.json; edição/diálogo e preferências da interface
+permanecem posteriores. A estimativa de contexto é heurística, separada do uso
+real reportado e da soma de tokens ausentes.
+
+### Validação e ambiente do M2
+
+Rust fixado 1.99.1/MSVC, CARGO_HOME=.cargo-cache/. As dependências foram
+baixadas pelo usuário e o lockfile foi atualizado pelo Cargo. A criação do
+branch também foi feita pelo usuário, após a recusa de escrita em .git.
+
+Uma primeira suíte passou com 59 testes e uma execução posterior com 75.
+Foram corrigidos o uso de API de slice ainda instável, lints do Clippy e
+cenários de contexto/cleanup identificados na revisão. Esses resultados
+intermediários não substituem a suíte do código final.
+
+Repetições do build encontraram LNK1104 ao abrir executáveis existentes no
+diretório de saída anterior. Não foi encontrado um processo de fixture
+pendente na consulta realizada. A causa exata não foi confirmada. A validação
+final usa um diretório novo (target/m2-gates), sem apagar artefatos anteriores.
+Isso é distinto de uma falha de teste ou de compilação Rust.
+
+O CI existente cobre Windows/Linux/macOS e executa fmt/check/clippy/test
+do workspace. O CI remoto do M2 ainda não foi publicado/executado.
+A consulta do PR do M1 por gh também falhou por restrição de rede; o merge
+remoto do M1 não foi presumido. Não houve alteração de remote, tag, release,
+publicação npm, commit ou push do M2.
+
+### Fechamento local do M2
+
+Gates aprovados no Windows/MSVC com a toolchain 1.99.1:
+
+- `cargo fmt --check`.
+- `cargo clippy --locked --workspace --all-targets --offline -- -D warnings`.
+- `cargo test --locked --workspace --offline`: **76 aprovados, zero falhas e zero ignorados**.
+
+Distribuição: CLI 3, core 9, protocol 5, providers 16, sandbox 4,
+store 4, integração de gerações 20, persistência 12 e tools 3.
+Testes finais em target/m2-gates; fmt/Clippy em target/m2-validation.
+Nenhuma alteração de código ocorreu depois desses testes.
+
+Permanecem pendentes o CI remoto nas três plataformas e as integrações
+CLI/TUI, ferramentas concretas/aprovações, Docker e ChatGPT dos milestones
+posteriores. Não houve teste com API paga ou credenciais reais.
+
+Commit proposto: `feat: add providers and generation orchestration`.
+Os arquivos deste M2 para revisão/commit estão listados abaixo.
+
+- `Cargo.lock`
+- `Cargo.toml`
+- `README.md`
+- `crates/core/Cargo.toml`
+- `crates/core/src/agent.rs`
+- `crates/core/src/context.rs`
+- `crates/core/src/guard.rs`
+- `crates/core/src/instructions.rs`
+- `crates/core/src/lib.rs`
+- `crates/core/src/ports.rs`
+- `crates/core/src/prompts.rs`
+- `crates/core/src/tokens.rs`
+- `crates/core/tests/policy.rs`
+- `crates/providers/Cargo.toml`
+- `crates/providers/src/catalog.json`
+- `crates/providers/src/http.rs`
+- `crates/providers/src/lib.rs`
+- `crates/providers/src/registry.rs`
+- `crates/providers/src/sse.rs`
+- `crates/providers/src/tests.rs`
+- `crates/providers/src/wire.rs`
+- `crates/sandbox/Cargo.toml`
+- `crates/sandbox/src/lib.rs`
+- `crates/sandbox/src/process.rs`
+- `crates/sandbox/tests/process.rs`
+- `crates/store/Cargo.toml`
+- `crates/store/src/journal.rs`
+- `crates/store/src/lib.rs`
+- `crates/store/src/services.rs`
+- `crates/store/tests/generations.rs`
+- `crates/tools/Cargo.toml`
+- `crates/tools/src/instructions.rs`
+- `crates/tools/src/lib.rs`
+- `crates/tools/tests/instructions.rs`
+- `deny.toml`
+- `docs/PARITY.md`
+- `docs/adr/0001-arquitetura.md`
+- `docs/generations.md`
+- `docs/persistence.md`
+
+### Revisão para o commit do M2
+
+Foram revisados os 39 arquivos listados: UTF-8/LF, TOML, git diff --check,
+nomes proibidos e padrões comuns de credenciais, sem ocorrências. Essa
+checagem não garante detectar todo segredo possível. O grafo dos oito
+crates do workspace foi verificado e não tem ciclos.
+
+O git add foi recusado por falta de permissão para criar .git/index.lock.
+O staged permanece vazio; o usuário precisará prepará-lo no seu terminal
+e a revisão do staged continua obrigatória antes do commit. Nenhum commit,
+push ou PR do M2 foi executado.

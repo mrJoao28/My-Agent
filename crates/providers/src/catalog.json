@@ -1,0 +1,119 @@
+[
+  {
+    "id": "claude-sonnet-4-6",
+    "provider": "anthropic",
+    "contextWindow": 1000000,
+    "pricing": {
+      "inputUsdPerMillionTokens": 3,
+      "outputUsdPerMillionTokens": 15
+    }
+  },
+  {
+    "id": "claude-haiku-4-5",
+    "provider": "anthropic",
+    "contextWindow": 200000,
+    "pricing": {
+      "inputUsdPerMillionTokens": 1,
+      "outputUsdPerMillionTokens": 5
+    }
+  },
+  {
+    "id": "claude-opus-4-6",
+    "provider": "anthropic",
+    "contextWindow": 1000000,
+    "pricing": {
+      "inputUsdPerMillionTokens": 5,
+      "outputUsdPerMillionTokens": 25
+    }
+  },
+  {
+    "id": "gpt-5.4",
+    "provider": "openai",
+    "contextWindow": 1050000,
+    "pricing": {
+      "inputUsdPerMillionTokens": 2.5,
+      "outputUsdPerMillionTokens": 15
+    }
+  },
+  {
+    "id": "gpt-5.4-mini",
+    "provider": "openai",
+    "contextWindow": 400000,
+    "pricing": {
+      "inputUsdPerMillionTokens": 0.75,
+      "outputUsdPerMillionTokens": 4.5
+    }
+  },
+  {
+    "id": "gpt-5.4-nano",
+    "provider": "openai",
+    "contextWindow": 400000,
+    "pricing": {
+      "inputUsdPerMillionTokens": 0.2,
+      "outputUsdPerMillionTokens": 1.25
+    }
+  },
+  {
+    "id": "llama3.1",
+    "provider": "ollama",
+    "contextWindow": 16384,
+    "pricing": {
+      "inputUsdPerMillionTokens": 0,
+      "outputUsdPerMillionTokens": 0
+    }
+  },
+  {
+    "id": "qwen2.5-coder",
+    "provider": "ollama",
+    "contextWindow": 16384,
+    "pricing": {
+      "inputUsdPerMillionTokens": 0,
+      "outputUsdPerMillionTokens": 0
+    }
+  },
+  {
+    "id": "deepseek-r1",
+    "provider": "ollama",
+    "contextWindow": 16384,
+    "pricing": {
+      "inputUsdPerMillionTokens": 0,
+      "outputUsdPerMillionTokens": 0
+    }
+  },
+  {
+    "id": "llama3.2:1b",
+    "provider": "ollama",
+    "contextWindow": 16384,
+    "pricing": {
+      "inputUsdPerMillionTokens": 0,
+      "outputUsdPerMillionTokens": 0
+    }
+  },
+  {
+    "id": "gemini-3-pro",
+    "provider": "google",
+    "contextWindow": 1048576,
+    "pricing": {
+      "inputUsdPerMillionTokens": 2,
+      "outputUsdPerMillionTokens": 12
+    }
+  },
+  {
+    "id": "gemini-3.6-flash",
+    "provider": "google",
+    "contextWindow": 1048576,
+    "pricing": {
+      "inputUsdPerMillionTokens": 1.5,
+      "outputUsdPerMillionTokens": 7.5
+    }
+  },
+  {
+    "id": "gemini-3.5-flash-lite",
+    "provider": "google",
+    "contextWindow": 1048576,
+    "pricing": {
+      "inputUsdPerMillionTokens": 0.3,
+      "outputUsdPerMillionTokens": 2.5
+    }
+  }
+]

@@ -10,3 +10,7 @@ description = "Futuras primitivas de confinamento e execução Docker."
 
 [lints]
 workspace = true
+
+[dependencies]
+tokio.workspace = true
+tokio-util.workspace = true

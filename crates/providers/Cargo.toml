@@ -6,11 +6,21 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish.workspace = true
-description = "Futuros adapters de modelos do My-Agent."
+description = "Adapters HTTP e codecs de modelos do My-Agent."
 
 [dependencies]
+tokio.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 myagent-core.workspace = true
 myagent-protocol.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+winapi-util = "0.1"

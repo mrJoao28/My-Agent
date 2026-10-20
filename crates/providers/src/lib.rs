@@ -1,3 +1,11 @@
 #![forbid(unsafe_code)]
+//! Codecs HTTP/SSE; nenhum SDK pode executar ferramentas.
+mod http;
+pub mod registry;
+pub mod sse;
+mod wire;
+pub use http::{HttpProvider, ProviderEndpoints, StreamLimits};
+pub use registry::{Model, ModelRegistry, Pricing, ProviderKind};
 
-//! Futuros adapters de modelos do My-Agent.
+#[cfg(test)]
+mod tests;

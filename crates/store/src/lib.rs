@@ -5,9 +5,11 @@
 //! fazer a ponte sem bloquear o executor. Drop do último handle libera leases.
 
 mod config;
+mod journal;
 mod migrations;
 mod records;
 mod services;
+pub use journal::StoreJournal;
 
 pub use config::{
     CLEANUP_INTERVAL, DATABASE_FILENAME, DAY_MS, HEARTBEAT_INTERVAL, LEASE_TIMEOUT_MS,

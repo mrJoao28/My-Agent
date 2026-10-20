@@ -6,14 +6,16 @@ com uma arquitetura idiomática em Rust, para Windows, Linux e macOS.
 
 O repositório contém um workspace com oito crates: protocol, core, providers,
 tools, sandbox, store, tui e cli. O binário `myagent` oferece apenas ajuda e
-versão; não há loop do agente, provider, ferramenta, banco ou TUI implementado.
+versão. O M1 acrescenta contratos compartilhados e um store SQLite local em
+biblioteca, ainda sem integração à CLI. Loop do agente, providers, ferramentas
+e TUI continuam pendentes.
 O tipo Mode prevê evolução, mas somente Plan e Build estão declarados.
 
 A arquitetura está aceita no [ADR 0001](docs/adr/0001-arquitetura.md): canais
 internos, armazenamento separado e futura importação explícita, SQLite bundled
-e tree-sitter com compilador C no build. O esqueleto não usa dependências
-externas; clap e serde serão adicionados no M1. As escolhas e alternativas
-estão justificadas no ADR.
+e tree-sitter com compilador C no build. As dependências do M1 e os contratos
+do store estão descritos em [Persistência M1](docs/persistence.md).
+As escolhas e alternativas estão justificadas no ADR.
 Consulte a [matriz de paridade](docs/PARITY.md) para comportamentos e testes a portar.
 
 ## Desenvolvimento
@@ -34,8 +36,9 @@ cargo run --locked -p myagent-cli --bin myagent -- --version
 
 O CI está configurado para executar esses gates em Windows, Linux e macOS.
 Uma execução local em Windows não comprova os outros dois sistemas. Nesta fase,
-há testes de integração da ajuda/versão e rejeição de argumentos, sem testes
-funcionais do agente. Ajuda/versão não abrem banco, configuração ou rede.
+os 24 testes de contratos, persistência e ajuda/versão passaram no Windows
+durante o fechamento do M1; o resultado nos demais sistemas depende do CI.
+Ajuda/versão não abrem banco, configuração ou rede.
 Docker e GitHub CLI são opcionais para preparar o repositório.
 
 ## Contribuição e segurança

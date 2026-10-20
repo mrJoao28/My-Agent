@@ -6,11 +6,21 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish.workspace = true
-description = "Futuro adapter SQLite e persistência do My-Agent."
+description = "SQLite local, sessões e persistência do My-Agent."
 
 [dependencies]
 myagent-core.workspace = true
 myagent-protocol.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+winapi-util = "0.1"
 
 [lints]
 workspace = true

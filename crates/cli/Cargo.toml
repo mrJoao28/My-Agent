@@ -13,6 +13,7 @@ name = "myagent"
 path = "src/main.rs"
 
 [dependencies]
+clap.workspace = true
 myagent-core.workspace = true
 myagent-protocol.workspace = true
 myagent-providers.workspace = true

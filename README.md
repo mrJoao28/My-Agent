@@ -4,10 +4,17 @@ Reescrita em Rust do My-Code-Agent, assistente de programação de terminal
 originalmente desenvolvido em TypeScript/Bun. O objetivo é paridade funcional
 com uma arquitetura idiomática em Rust, para Windows, Linux e macOS.
 
-Este repositório está no bootstrap: há somente um crate-base vazio, sem
-dependências externas. Ainda não existe CLI, TUI, provider ou ferramenta
-implementada em Rust. Consulte a [matriz de paridade](docs/PARITY.md) para o
-inventário de comportamentos, evidências no legado e testes a portar.
+O repositório contém um workspace com oito crates: protocol, core, providers,
+tools, sandbox, store, tui e cli. O binário `myagent` oferece apenas ajuda e
+versão; não há loop do agente, provider, ferramenta, banco ou TUI implementado.
+O tipo Mode prevê evolução, mas somente Plan e Build estão declarados.
+
+A arquitetura está aceita no [ADR 0001](docs/adr/0001-arquitetura.md): canais
+internos, armazenamento separado e futura importação explícita, SQLite bundled
+e tree-sitter com compilador C no build. O esqueleto não usa dependências
+externas; clap e serde serão adicionados no M1. As escolhas e alternativas
+estão justificadas no ADR.
+Consulte a [matriz de paridade](docs/PARITY.md) para comportamentos e testes a portar.
 
 ## Desenvolvimento
 
@@ -17,14 +24,18 @@ fixada em `rust-toolchain.toml`: Rust 1.99.1, stable em 19/10/2026, conforme o
 [anúncio oficial](https://blog.rust-lang.org/2026/10/15/Rust-1.99.1/).
 
 ```sh
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
+cargo fmt --all --check
+cargo check --locked --workspace --all-targets
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
+cargo run --locked -p myagent-cli --bin myagent -- --help
+cargo run --locked -p myagent-cli --bin myagent -- --version
 ```
 
 O CI está configurado para executar esses gates em Windows, Linux e macOS.
 Uma execução local em Windows não comprova os outros dois sistemas. Nesta fase,
-`cargo test` valida apenas a compilação do crate vazio; não há testes funcionais.
+há testes de integração da ajuda/versão e rejeição de argumentos, sem testes
+funcionais do agente. Ajuda/versão não abrem banco, configuração ou rede.
 Docker e GitHub CLI são opcionais para preparar o repositório.
 
 ## Contribuição e segurança

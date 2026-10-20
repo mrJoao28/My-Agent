@@ -16,15 +16,17 @@ Prefira `#![forbid(unsafe_code)]`; qualquer exceção exige justificativa docume
 Antes de fechar um milestone, execute:
 
 ```sh
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
+cargo fmt --all --check
+cargo check --locked --workspace --all-targets
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
 ```
 
 O CI deve executar os mesmos gates em Windows, Linux e macOS. Cubra CRLF,
 caminhos, junctions, cancelamento e limites quando afetados. Testes ignorados
 não contam como aprovados. Diferencie bloqueios de ambiente de erros de código.
-O crate vazio inicial não tem testes funcionais: gates verdes não significam paridade.
+O esqueleto tem testes da interface pública de ajuda/versão e argumentos;
+gates verdes não significam paridade funcional do agente.
 
 `deny.toml` define a política inicial de licenças e fontes. Quando houver
 dependências, valide-a com `cargo deny check` em ambiente com cargo-deny e acesso

@@ -1,0 +1,16 @@
+[package]
+name = "myagent-store"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Futuro adapter SQLite e persistência do My-Agent."
+
+[dependencies]
+myagent-core.workspace = true
+myagent-protocol.workspace = true
+
+[lints]
+workspace = true

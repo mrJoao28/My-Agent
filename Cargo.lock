@@ -3,5 +3,62 @@
 version = 4
 
 [[package]]
-name = "my-agent"
+name = "myagent-cli"
 version = "0.1.0"
+dependencies = [
+ "myagent-core",
+ "myagent-protocol",
+ "myagent-providers",
+ "myagent-sandbox",
+ "myagent-store",
+ "myagent-tools",
+ "myagent-tui",
+]
+
+[[package]]
+name = "myagent-core"
+version = "0.1.0"
+dependencies = [
+ "myagent-protocol",
+]
+
+[[package]]
+name = "myagent-protocol"
+version = "0.1.0"
+
+[[package]]
+name = "myagent-providers"
+version = "0.1.0"
+dependencies = [
+ "myagent-core",
+ "myagent-protocol",
+]
+
+[[package]]
+name = "myagent-sandbox"
+version = "0.1.0"
+
+[[package]]
+name = "myagent-store"
+version = "0.1.0"
+dependencies = [
+ "myagent-core",
+ "myagent-protocol",
+]
+
+[[package]]
+name = "myagent-tools"
+version = "0.1.0"
+dependencies = [
+ "myagent-core",
+ "myagent-protocol",
+ "myagent-sandbox",
+]
+
+[[package]]
+name = "myagent-tui"
+version = "0.1.0"
+dependencies = [
+ "myagent-core",
+ "myagent-protocol",
+]

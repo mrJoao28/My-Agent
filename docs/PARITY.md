@@ -15,8 +15,9 @@ O status descreve a implementação **no My-Agent/Rust**, não no legado:
 - **feito**: comportamento portado com evidência de validação e gates aprovados.
 - **descartado com motivo**: decisão explícita, com justificativa registrada.
 
-Nenhuma funcionalidade do assistente foi portada neste bootstrap; o crate-base
-é vazio e não tem dependências externas. Não se exige reproduzir a arquitetura
+O bootstrap inicial tinha um crate-base vazio, sem dependências externas. A
+etapa de arquitetura acrescenta o workspace e a CLI mínima descritos ao final;
+o agente ainda não está implementado. Não se exige reproduzir a arquitetura
 Hono/React/Prisma, o protocolo interno ou os nomes de crates para obter paridade.
 Devem ser preservados os comportamentos observáveis e os controles de segurança.
 Não há descarte funcional decidido nesta etapa.
@@ -135,7 +136,7 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | CLI-02 | Resume | `resume` escolhe sessão da pasta, `resume --all` permite outras pastas e troca workspace; seleção/aborto e validação. | `M/resume.ts`, `M/options.ts`, `S/services/workspace-sessions.ts` | pendente | `M/options.test.ts`, `S/services/workspace-sessions.test.ts`; sem teste dedicado da seleção interativa em resume.ts identificado |
 | CLI-03 | Doctor | Diagnóstico de runtime, diretório gravável, SQLite/migrations, Docker/imagem, ferramentas detectadas versus imagem e configuração de modelos sem valores de chaves. O doctor legado pode escrever/migrar: não foi executado nesta inspeção. | `M/doctor.ts`, `M/doctor-tools.ts` | pendente | `M/doctor-tools.test.ts`, `S/security/docker-availability.test.ts`; sem teste completo do comando doctor identificado |
 | CLI-04 | Headless | `exec` cria sessão nova, prompt até 9.000 caracteres, mode/model, JSONL opcional, permissões explícitas e allow-push; exits 0 sucesso, 1 falha, 3 negação e 130 cancelamento. | `M/options.ts`, `M/exec.ts` | pendente | `M/exec.test.ts` (inclui HTTP → geração → SDK → tools simulados) |
-| CLI-05 | Ajuda/versão | `--help`/`-h`, `--version`/`-v`, rejeição de argumentos ambíguos/duplicados/inválidos; ajuda não abre banco nem providers. | `M/options.ts`, `M/cli.ts` | pendente | `M/options.test.ts`, `M/launcher.test.ts`, `M/exec.test.ts` |
+| CLI-05 | Ajuda/versão | `--help`/`-h`, `--version`/`-v`, rejeição de argumentos ambíguos/duplicados/inválidos; ajuda não abre banco nem providers. | `M/options.ts`, `M/cli.ts` | em andamento | `M/options.test.ts`, `M/launcher.test.ts`, `M/exec.test.ts`; início do port em `crates/cli/tests/cli.rs`, ainda sem os demais comandos |
 | UI-01 | Telas | Home, nova sessão e sessão/histórico; shell compartilhado, título/caminho, mensagens usuário/assistente/erro, reasoning/ferramentas, avisos e interrupção visível. | `C/screens/home.tsx`, `C/screens/new-session.tsx`, `C/screens/session.tsx`, `C/components/messages/bot-message.tsx`, `C/components/session-shell.tsx` | pendente | `C/screens/session-render.test.tsx`, `C/components/session-shell.test.tsx`, `C/hooks/use-chat.test.tsx`, `scripts/cui-text.test.ts` |
 | UI-02 | Entrada | Texto multilinha, Ctrl+J para quebra, Enter para envio, Tab para modo, autocomplete de menções @ a arquivos/diretórios e comandos /; limite de mensagem e bloqueio durante aprovação/retomada. | `C/components/input-bar.tsx`, `C/components/command-menu/use-command-menu.ts` | pendente | `C/components/session-shell.test.tsx`, `C/dialogs/agents-dialog.test.tsx`, `C/components/approval-panel.test.tsx`; sem suíte dedicada completa de menções identificada |
 | UI-03 | Menu de comandos | `/undo`, `/sessions`, `/theme`, `/models`, `/agents`, `/exit`, `/new`; filtro, seleção e navegação. `/agents` alterna modos, não agentes autônomos. | `C/components/command-menu/commands.tsx`, `C/components/command-menu/filter-commands.ts`, `C/components/command-menu/index.tsx` | pendente | `C/dialogs/agents-dialog.test.tsx`, `C/dialogs/models-dialog.test.tsx`, `C/components/approval-undo.test.tsx`; sem teste dedicado de todo o menu identificado |
@@ -209,9 +210,9 @@ Decisões de expansão ou descarte exigem escopo próprio.
 | Inventário de paridade | feito | Matriz por comportamento, ferramentas, fontes e testes; inspeção estática, sem executar legado. |
 | Toolchain e arquivos de repositório | feito | Rust 1.99.1 fixado, crate vazio e Cargo.lock, padrões de texto, licença, contribuição, segurança, deny e configuração GitHub; revisão estática e gates locais aprovados. |
 | Gates locais | feito | fmt, Clippy sem warnings e cargo test com exit 0 no Windows; 0 testes unitários, 0 doctests e 0 ignorados. Não há testes funcionais no crate-base. |
-| CI Windows/Linux/macOS | em andamento | Workflow configurado; publicação e execução no GitHub ainda não confirmadas. |
-| Git local/remoto | em andamento | init em main funcionou. A inspeção local mostra main sem commits e nenhum remote/ref. O usuário apresentou falhas de dubious ownership: .git pertence a CodexSandboxOffline, mas o terminal externo usa joaof. Configuração de confiança no perfil do usuário e confirmação de origin ainda pendentes. |
-| Commit/push | pendente | As saídas posteriores apresentadas pelo usuário mostram que as tentativas de `chore: bootstrap repository` e push foram recusadas por dubious ownership. Nenhum commit/push foi confirmado ou executado por este agente. |
+| CI Windows/Linux/macOS | em andamento | Workflow publicado com o bootstrap; resultado da execução no GitHub ainda não conferido. |
+| Git local/remoto | feito | main inicializada, origin aponta para https://github.com/mrJoao28/My-Agent.git e acompanha origin/main. O usuário executou ls-remote antes do primeiro commit, sem refs remotas. Bloqueio de ownership superado no terminal do usuário. |
+| Commit/push | feito | Commit inicial `205ee94 chore: bootstrap repository`, criado e enviado pelo usuário; push criou main e configurou upstream. Log, status e branch locais confirmam main em 205ee94, alinhada a origin/main. |
 
 A sequência técnica sugerida, sem iniciar outro milestone nesta etapa, é:
 persistência/contratos e sessões → caminhos/política/approvals/checkpoints →
@@ -269,39 +270,143 @@ conferir o histórico/remoto, revisar os arquivos staged em busca de segredos
 e obter a autorização exigida pelo `AGENTS.md`; não repetir um bootstrap já
 feito externamente.
 
-### Reconferência após o relato do usuário
+### Fechamento Git confirmado
 
-O usuário informou ter configurado origin, criado o commit
-`chore: bootstrap repository` e feito push da main no Git Bash. A inspeção
-posterior das ferramentas disponíveis apresentou:
+As primeiras tentativas no terminal externo falharam por `dubious ownership`:
+`.git` pertence a `CodexSandboxOffline`, enquanto o usuário executa como `joaof`.
+O bloqueio foi superado pelo usuário; este agente não alterou sua configuração
+global. As observações anteriores de repositório vazio descreviam o estado
+anterior ao commit bem-sucedido e não são pendências atuais.
 
-- `git log --oneline -5`: falhou com main sem commits.
-- `git status`: main sem commits, arquivos do bootstrap untracked e nada staged.
-- `git branch -vv`, `git remote -v`, `git show-ref` e `git ls-files`: sem entradas.
-- `git rev-parse --show-toplevel --absolute-git-dir`: confirmou
-  `C:/Users/joaof/My-Agent` e `C:/Users/joaof/My-Agent/.git`.
-- Consulta de commits pela API GitHub para `mrJoao28/My-Agent`: HTTP 409,
-  `Git Repository is empty`; busca da branch main retornou lista vazia.
+O usuário apresentou as saídas de remote add, `git ls-remote origin` sem refs,
+staging dos 20 arquivos, commit inicial e push. O commit criado foi
+`205ee94 chore: bootstrap repository`, com 20 arquivos e 753 inserções.
+O push criou `main` no origin e configurou o acompanhamento de `origin/main`.
 
-As saídas posteriormente fornecidas pelo usuário mostram que `git commit` e
-`git push` falharam com `detected dubious ownership`: `.git` pertence ao usuário
-`CodexSandboxOffline`, enquanto o PowerShell externo executa como `joaof`.
-Essas tentativas não criaram o commit nem publicaram a main.
+A reconferência local deste agente confirmou:
 
-O próprio Git indicou uma exceção de confiança restrita ao repositório. Ela
-deve ser configurada pelo usuário no seu próprio terminal/perfil, sem usar uma
-exceção global para todos os diretórios:
+```text
+git log --oneline -3
+205ee94 chore: bootstrap repository
 
-```powershell
-git config --global --add safe.directory C:/Users/joaof/My-Agent
 git status
-git remote -v
+On branch main
+Your branch is up to date with 'origin/main'.
+nothing to commit, working tree clean
+
+git branch -vv
+* main 205ee94 [origin/main] chore: bootstrap repository
 ```
 
-Este agente não alterou a configuração global do usuário. Após essa correção,
-confirmar origin e consultar `git ls-remote origin` antes de qualquer commit;
-se houver commits remotos, parar e consultar o usuário. Revisar staged e seguir
-as autorizações de commit/push do `AGENTS.md`. Confirmar o commit e a publicação
-antes de criar o branch do próximo milestone.
-Nesta reconferência foi alterada apenas esta documentação; os gates registrados
-acima são da preparação inicial e não foram executados novamente.
+`git remote -v` também confirmou a URL esperada para fetch e push. O status
+limpo acima foi observado antes desta atualização de `docs/PARITY.md`; ela fica
+como alteração local, sem novo commit/push. O resultado do CI nos três sistemas
+ainda precisa ser conferido; os gates locais já registrados são da preparação
+inicial e não foram executados novamente nesta alteração documental.
+
+A base está preparada para receber o Prompt 2. Criar um branch próprio para o
+próximo milestone quando seu escopo for definido, preservando esta atualização
+documental. Continuam válidas as autorizações explícitas para commits, pushes e PRs.
+
+## Arquitetura e esqueleto — Prompt 2 (gates finais aprovados; commit pendente)
+
+O [ADR 0001](adr/0001-arquitetura.md) compara organização dos crates, transporte,
+SQLite, bibliotecas, parsing JS/TS, SDKs de LLM e modos extensíveis. Está
+**aceito**: canais internos, armazenamento separado com importação explícita
+posterior, SQLite bundled/tree-sitter com compilador C e esqueleto sem crates
+externas. Clap e serde entram no M1; não foram adicionados nesta etapa.
+
+Nos itens API-01/API-02, os comportamentos de sessão, autorização e comandos
+continuam pendentes de port. A compatibilidade do transporte HTTP/SSE interno
+não será reproduzida, por decisão explícita no ADR 0001. Controles de token e
+Host/Origin só se aplicariam a um futuro adapter HTTP; não substituem as
+validações obrigatórias de workspace, modo, ferramentas e aprovações no core.
+
+| Entrega | Estado nesta etapa |
+| --- | --- |
+| Workspace | Oito pacotes myagent-protocol/core/providers/tools/sandbox/store/tui/cli, com manifests locais, resolver 3, metadados e lints comuns. Raiz virtual substitui o crate vazio inicial. |
+| Dependências | Grafo sem ciclos verificado com cargo metadata; core depende somente de protocol entre os membros. Providers/tools/store dependem das futuras portas do core, nunca o inverso; sandbox independente. |
+| Modos | Mode não exaustivo em protocol com apenas Plan/Build, reexportado por core. Sem Learn, serde, prompts ou política executável nesta etapa. |
+| CLI | Binário myagent com --help/-h, --version/-v, ajuda sem argumentos e saída 2 para argumentos inválidos/ambíguos. Não inicializa banco, configuração, providers ou ferramentas. |
+| Bibliotecas externas | Nenhuma adicionada, por decisão aceita. Clap/serde entram no M1. O parser std mínimo não será expandido para implementar os demais comandos. |
+| CI | Workflow ampliado para fmt/check/clippy/test do workspace e smoke de ajuda/versão em Windows, Linux e macOS. Mudança local ainda não publicada nem executada remotamente. |
+| Validação local | Gates finais aprovados no Windows após a aceitação do ADR: fmt, check, Clippy sem warnings e cargo test; três testes de integração, zero falhas e zero ignorados. Ajuda e versão também executadas com sucesso. |
+| Git | O usuário criará feat/m0-architecture externamente, após a falha de permissão de criação da ref neste ambiente. Na checagem inicial deste fechamento, a branch ativa ainda era main. Sem commit, push ou PR desta etapa. |
+
+A tentativa de consultar crates.io pelo Cargo falhou ao conectar a
+`index.crates.io:443`, antes de obter dependências. Isso é falha de ambiente;
+não foi usado como motivo para alterar a recomendação arquitetural. O cache
+local de Cargo fica em `.cargo-cache/`, ignorado pelo Git, para não escrever
+fora do workspace. Nenhuma credencial ou configuração privada foi lida.
+
+Todos os targets próprios proíbem unsafe. Os demais crates são fronteiras
+compiláveis, sem implementações fictícias de I/O ou funcionalidades do agente.
+O resultado dos três testes da CLI não comprova a paridade dos modos, do loop,
+das ferramentas, da persistência ou dos providers.
+
+Validação preliminar executada com `RUSTUP_TOOLCHAIN=stable` (rustc/cargo 1.99.1)
+e CARGO_HOME apontando para `.cargo-cache/`:
+
+```text
+cargo generate-lockfile --offline                                  exit 0
+cargo fmt --all --check                                            exit 0
+cargo check --locked --workspace --all-targets --offline            exit 0
+cargo clippy --locked --workspace --all-targets --offline -- -D warnings
+                                                                  exit 0
+cargo test --locked --workspace --offline                           exit 0
+cargo run --locked --offline -p myagent-cli --bin myagent -- --help  exit 0
+cargo run --locked --offline -p myagent-cli --bin myagent -- --version
+                                                                  exit 0
+```
+
+O primeiro fmt --check apontou uma asserção a formatar. A geração dos arquivos
+também perdeu acentos na passagem pelo PowerShell; os nove arquivos afetados
+foram corrigidos com UTF-8 explícito e a integração da ajuda passou a verificar
+o texto em português. Depois de `cargo fmt --all`, os gates acima foram
+executados novamente e passaram. Os testes cobrem ajuda (incluindo ausência de
+argumentos e alias), versão do pacote e rejeição de opções inválidas/ambíguas.
+Os demais targets não possuem testes de features do agente.
+
+`cargo metadata --no-deps --format-version 1 --offline` foi usado para verificar
+os oito membros e seu grafo acíclico. `git diff --check` passou para os arquivos
+rastreados. As validações não acessaram o legado em escrita nem dados privados;
+não houve instalação de dependências, chamadas de IA, execução Docker ou CI remoto.
+
+As decisões arquiteturais foram respondidas e incorporadas. Concluir a
+revisão dos arquivos staged em busca de segredos e apresentar diff stat,
+arquivos e mensagem de commit para autorização. Confirmar
+que feat/m0-architecture está ativa antes de executar um commit autorizado;
+push do branch e abertura do PR serão pedidos separadamente depois do commit.
+
+### Fechamento após a aceitação do ADR
+
+Reexecutados no Windows com Rust 1.99.1, `RUSTUP_TOOLCHAIN=stable`, CARGO_HOME
+local e `CARGO_NET_OFFLINE=true`, todos com exit 0:
+
+```text
+cargo fmt --check
+cargo check --locked --workspace --all-targets
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
+cargo run --locked -p myagent-cli --bin myagent -- --help
+cargo run --locked -p myagent-cli --bin myagent -- --version
+```
+
+Resultado: três testes de integração aprovados, nenhum reprovado ou ignorado;
+os demais targets não têm testes de features do agente. A versão exibida foi
+`myagent 0.1.0`. A revisão dos 25 arquivos com conteúdo novo/modificado não
+encontrou padrões comuns de credenciais; UTF-8/LF e manifests foram conferidos,
+assim como os três sistemas da matriz CI. Essa revisão não garante detectar
+todo segredo possível e não substitui a conferência do staged antes do commit.
+
+O `git add` dos 26 caminhos desta entrega foi tentado após os gates e recusado
+ao criar `.git/index.lock` por falta de permissão (exit 128). Nenhum arquivo
+ficou staged; a branch ativa continuava main. O diff para revisão deve incluir
+também os arquivos novos, pois git diff --stat sozinho não mostra untracked.
+
+Pendências: criação externa e confirmação de feat/m0-architecture, preparação
+e revisão do staged no ambiente com permissão, autorização de commit, posterior push/PR e resultado do
+CI remoto. A importação de dados fica para uma etapa posterior; clap/serde
+entram no M1. Nenhum banco, provider, ferramenta executável, TUI ou modo Learn
+foi implementado e nenhuma credencial real foi acessada. Mensagem de commit
+proposta: `chore: define architecture and scaffold workspace`.

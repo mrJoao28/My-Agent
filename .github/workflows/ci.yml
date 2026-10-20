@@ -27,8 +27,14 @@ jobs:
           test -n "$version"
           rustup toolchain install "$version" --profile minimal --component rustfmt --component clippy
       - name: Conferir formatação
-        run: cargo fmt --check
+        run: cargo fmt --all --check
+      - name: Conferir workspace
+        run: cargo check --locked --workspace --all-targets
       - name: Executar Clippy
-        run: cargo clippy --locked --all-targets -- -D warnings
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Executar testes
-        run: cargo test --locked
+        run: cargo test --locked --workspace
+      - name: Conferir ajuda e versão do binário
+        run: |
+          cargo run --locked -p myagent-cli --bin myagent -- --help
+          cargo run --locked -p myagent-cli --bin myagent -- --version

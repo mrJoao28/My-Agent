@@ -1,5 +1,6 @@
 # Rust: versionar Cargo.lock para builds reproduzíveis do aplicativo.
 /target/
+/.cargo-cache/
 **/*.rs.bk
 
 # Referências locais e artefatos do legado.

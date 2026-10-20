@@ -1,0 +1,12 @@
+[package]
+name = "myagent-sandbox"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Futuras primitivas de confinamento e execução Docker."
+
+[lints]
+workspace = true

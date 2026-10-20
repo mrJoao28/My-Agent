@@ -1,11 +1,32 @@
-[package]
-name = "my-agent"
+[workspace]
+members = [
+    "crates/protocol",
+    "crates/core",
+    "crates/providers",
+    "crates/tools",
+    "crates/sandbox",
+    "crates/store",
+    "crates/tui",
+    "crates/cli",
+]
+resolver = "3"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.99.1"
 license = "MIT"
-description = "Assistente de programação de terminal em Rust"
 repository = "https://github.com/mrJoao28/My-Agent"
 publish = false
 
-[dependencies]
+[workspace.dependencies]
+myagent-protocol = { path = "crates/protocol" }
+myagent-core = { path = "crates/core" }
+myagent-providers = { path = "crates/providers" }
+myagent-tools = { path = "crates/tools" }
+myagent-sandbox = { path = "crates/sandbox" }
+myagent-store = { path = "crates/store" }
+myagent-tui = { path = "crates/tui" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

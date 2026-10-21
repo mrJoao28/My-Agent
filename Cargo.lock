@@ -904,6 +904,9 @@ dependencies = [
  "myagent-store",
  "myagent-tools",
  "myagent-tui",
+ "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

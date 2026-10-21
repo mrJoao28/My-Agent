@@ -1074,3 +1074,13 @@ Docker, vinculada a argumentos, sessão, workspace e cancelamento. Chamadas
 diretas não contornam a autorização quando o gate está configurado. Os
 runners fixos de teste/tipos mantêm a política isolada do M5. Teste com
 driver simulado confirma que nenhum container inicia antes do Y.
+
+Etapa 7: CLI interativa ligada a StoreJournal/Agent/providers e aos registros
+reais de ferramentas; carrega a sessão recente por workspace e oferece
+nova sessão, modelos e retomada explícita. /undo usa MutationRegistry local.
+Uso total soma todas as páginas persistidas, mesmo quando só as mensagens
+recentes são desenhadas. --demo usa provider fictício sem rede/credenciais,
+mas mantém SQLite, checkpoint, autorização e undo reais em temporários
+descartáveis. Testes cobrem duas escritas, cancelamento, PLAN, escopo e uso.
+tempfile agora também atende essa demonstração isolada na CLI; tokio e
+serde_json reutilizam dependências existentes para tarefas e contratos.

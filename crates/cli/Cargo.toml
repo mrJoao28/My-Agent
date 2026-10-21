@@ -21,6 +21,9 @@ myagent-tools.workspace = true
 myagent-sandbox.workspace = true
 myagent-store.workspace = true
 myagent-tui.workspace = true
+tokio.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

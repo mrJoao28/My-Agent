@@ -1,5 +1,42 @@
 # TUI Grafite — Milestone 6
 
+## Revisão da interface (21/10/2026)
+
+O cabeçalho apresenta somente o último componente do diretório (ou a raiz),
+incluindo caminhos Windows/UNC e Unix. O workspace completo continua intacto
+no estado e na integração com autorização, ferramentas e persistência.
+
+O campo de mensagem ocupa sempre cinco linhas externas, com três linhas de
+texto e rolagem interna acompanhando o cursor. Quebra visual e posição do
+cursor compartilham o mesmo cálculo por grafemas, inclusive nas bordas da
+linha. Histórico, barra única de tokens e rodapé não mudam de posição ao
+digitar ou colar várias linhas.
+
+Caracteres imprimíveis com AltGr (Ctrl+Alt) são aceitos como texto. A barra
+`/` também é preservada quando reportada com modificadores. Sugestões aparecem
+somente enquanto o texto é prefixo de um comando; Tab completa a seleção e
+Esc fecha as sugestões preservando o texto. Enter executa somente nomes
+exatos de comandos. URLs, caminhos e mensagens multilinha iniciados por `/`
+podem ser enviados como texto comum. Paste passa pelo mesmo limite de 9000
+unidades UTF-16 e pela normalização de CRLF já existentes.
+
+Respostas possuem moldura discreta e rótulo do modo de origem. O modo vem da
+geração em streaming ou da mensagem persistida, sem depender do seletor da
+próxima mensagem. Erros possuem rótulo e moldura próprios; painéis sucessivos
+por arquivo continuam separados. NO_COLOR mantém molduras e rótulos.
+
+A home centraliza instruções curtas. A aprovação usa um painel centralizado
+horizontalmente, com largura máxima de 100 colunas, ação/escopo roláveis e
+decisões separadas da prévia. AltGr nunca aprova. As políticas de Y/A/N/M,
+cancelamento e ausência de efeitos antes do consentimento permanecem no
+gerenciador existente. Em terminais baixos, o painel pode cobrir a entrada
+temporariamente, que fica sem foco enquanto há aprovação.
+
+Os screenshots anexados e o mockup não estavam disponíveis nesta revisão;
+o resultado segue a descrição textual e os snapshots do TestBackend. As
+regras do legado em `docs/APROVACOES_E_UNDO.md` foram lidas nesta revisão.
+As limitações e os resultados efetivamente executados estão em PARITY.md.
+
 A entrada interativa usa ratatui/crossterm diretamente com o core Rust.
 Não há servidor HTTP local nem processo Node/Bun entre a interface e as
 sessões. O layout escolhido pelo usuário tem PLAN/BUILD no cabeçalho,
@@ -122,7 +159,7 @@ Para conferência manual, execute `--demo`: observe os dois painéis, teste
 Enter/Tab/Y/N na aprovação, `/undo`, diálogos, Esc/Ctrl+C, resize e saída.
 
 O diálogo `/chatgpt` informa que login de conta pertence ao M7; não declara
-conta conectada. O legado `packages/cui/src` e
-`docs/APROVACOES_E_UNDO.md` não estavam acessíveis neste ambiente; o GitHub
-retornou 404 para My-Code-Agent. A implementação segue os contratos Rust e
-a matriz de paridade disponível, sem afirmar comparação direta com o legado.
+conta conectada. No fechamento original do M6, o legado `packages/cui/src` e
+`docs/APROVACOES_E_UNDO.md` não estavam acessíveis naquele ambiente. Nesta
+revisão, o documento de aprovação/undo foi lido no checkout local somente
+leitura do legado. Não houve comparação com screenshots ou mockups ausentes.

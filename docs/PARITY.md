@@ -1124,3 +1124,58 @@ autenticação real do M7. UI-06 permanece parcial na paridade histórica de
 duração/status; a barra de 10M e o modo em execução estão implementados.
 CLI resume --all/doctor/exec e edição de configurações continuam nos seus
 milestones, sem serem anunciados como disponíveis na TUI.
+
+### Revisão corretiva da TUI — 21/10/2026
+
+Trabalho no checkout atual, sem criar branches, commits, push ou PR. Nenhum
+crate novo. Integração em crates/cli e regras de aprovação/undo revisadas;
+o caminho completo continua sendo a identidade do workspace no backend.
+
+- Cabeçalho mostra somente o nome do diretório, incluindo caminhos Windows,
+  UNC e Unix; raízes recebem um rótulo curto.
+- Entrada com cinco linhas externas fixas e rolagem interna. Cursor e texto
+  compartilham a quebra por grafemas; corrigida também a divergência quando
+  uma linha ocupa exatamente a largura disponível antes de uma quebra.
+- `/` é preservado em teclado/paste, com modificadores e AltGr. O filtro de
+  Ctrl/Alt descartava caracteres; o despacho de qualquer texto iniciado por
+  `/` como comando consumia caminhos/mensagens comuns. Agora Enter executa
+  apenas comandos exatos, Tab completa e Esc fecha sugestões sem apagar.
+- Respostas têm moldura e modo de origem retido no streaming e no histórico;
+  mudar PLAN/BUILD para a próxima solicitação não recolore mensagens antigas.
+  Erros e painéis sucessivos por arquivo permanecem distintos, com NO_COLOR.
+- Home reorganizada e aprovação centralizada horizontalmente, limitada a
+  100 colunas, com escopo/ação roláveis e controles separados da prévia.
+  Nenhum efeito foi adicionado antes da autorização. AltGr não aprova.
+- Sugestões ficam limitadas ao histórico, preservando a entrada ao reduzir
+  o terminal. Mantidas uma única barra cumulativa de 10M e indicação lateral.
+
+Regressões adicionadas em focus.rs, primitives.rs e rendering.rs: entrada
+normal e paste, CRLF, URLs/caminhos, Ctrl+J, AltGr, fechamento/completação do
+menu, cursor Unicode, geometria estável, resize, rótulos de workspace, modos
+persistidos/streaming e cores/rótulos sem cores. Cinco snapshots TestBackend
+foram revisados como células de terminal antes da atualização.
+
+Validação final desta revisão no Windows: `cargo fmt --check` e
+`cargo clippy --all-targets -- -D warnings` passaram. A suíte completa passou
+com `cargo test --locked --workspace -- --test-threads=1`: **201 testes
+aprovados, zero falhas e um teste Docker real ignorado**, que não conta como
+aprovação. Os 25 testes da TUI passaram com os cinco snapshots revisados,
+sem opções de aceitação automática na rodada final.
+
+Na rodada paralela, dois testes de Git em mutations.rs retornaram Error::Git
+durante commits fictícios. Ambos passaram isoladamente e na rodada completa
+em série; a causa da intermitência não foi comprovada. Não foram alterados
+os testes nem o código de Git para mascarar as falhas. Falhas intermediárias
+LNK1104 e acesso negado ao executar/substituir binários ocorreram no ambiente
+Windows. A demonstração iniciada para tentar o teste interativo foi encerrada
+antes da rodada final, liberando myagent.exe. Não houve alterações em
+crates/cli nem nas políticas de autorização/undo.
+
+Os screenshots anexados e o mockup Grafite não estavam disponíveis nesta
+conversa nem no repositório. Não houve comparação visual com essas imagens.
+O documento legado APROVACOES_E_UNDO.md estava acessível e foi lido.
+Ubuntu/WSL foi consultado, mas não possui cargo/rustc; testes Linux pendentes.
+A tentativa de terminal interativo Windows não retornou sessão controlável;
+Windows Terminal/PowerShell com teclado ABNT2 físico permanece sem validação
+manual. O CI existente cobre Windows/Linux/macOS, mas não foi disparado nesta
+revisão. Testes ignorados não contam como aprovados.

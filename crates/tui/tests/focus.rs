@@ -256,3 +256,136 @@ fn preview_character_limit_and_action_endpoints_are_explicit() {
         }
     }
 }
+
+#[test]
+fn slash_keyboard_modifiers_and_paste_preserve_literal_text() {
+    for modifiers in [
+        KeyModifiers::NONE,
+        KeyModifiers::SHIFT,
+        KeyModifiers::ALT,
+        KeyModifiers::CONTROL | KeyModifiers::ALT,
+        KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SHIFT,
+    ] {
+        let mut app = app();
+        app.event(Event::Key(KeyEvent::new(KeyCode::Char('/'), modifiers)));
+        assert_eq!(app.input.text(), "/");
+        assert!(app.command_menu_open());
+        key(&mut app, KeyCode::Esc);
+        assert_eq!(app.input.text(), "/");
+        assert!(!app.command_menu_open());
+        app.event(Event::Paste("https://example.com/a/b\r\n/tmp/a".into()));
+        assert_eq!(app.input.text(), "/https://example.com/a/b\n/tmp/a");
+    }
+    for text in [
+        "/",
+        "/tmp/a",
+        "/new project",
+        "/new\nsecond line",
+        "https://example.com/a/b",
+        "first\n/next",
+    ] {
+        for paste in [false, true] {
+            let mut app = app();
+            if paste {
+                app.event(Event::Paste(text.into()));
+            } else {
+                for c in text.chars() {
+                    if c == '\n' {
+                        app.event(Event::Key(KeyEvent::new(
+                            KeyCode::Char('j'),
+                            KeyModifiers::CONTROL,
+                        )));
+                    } else {
+                        key(&mut app, KeyCode::Char(c));
+                    }
+                }
+            }
+            assert_eq!(app.input.text(), text);
+            let actions = key(&mut app, KeyCode::Enter);
+            assert!(
+                matches!(actions.as_slice(), [Action::Submit(input)] if input.content.as_deref() == Some(text))
+            );
+        }
+    }
+}
+
+#[test]
+fn suggestions_complete_explicitly_and_altgr_never_approves() {
+    let mut app = app();
+    app.input.set("/mod");
+    key(&mut app, KeyCode::Tab);
+    assert_eq!(app.input.text(), "/models");
+    key(&mut app, KeyCode::Enter);
+    assert_eq!(app.dialog.as_ref().unwrap().kind, DialogKind::Models);
+    app.dialog = None;
+    app.approval = Some(approval("write_file", true));
+    for c in ['y', 'a', 'n', 'c'] {
+        assert!(
+            app.event(Event::Key(KeyEvent::new(
+                KeyCode::Char(c),
+                KeyModifiers::CONTROL | KeyModifiers::ALT
+            )))
+            .is_empty()
+        );
+        assert!(app.approval.is_some());
+    }
+}
+
+#[test]
+fn streaming_keeps_generation_mode_after_next_mode_changes() {
+    use myagent_protocol::StreamEvent;
+    use myagent_tui::transcript::Entry;
+    let mut app = app();
+    app.mode = Mode::Plan;
+    app.input.set("request");
+    key(&mut app, KeyCode::Enter);
+    app.stream(StreamEvent::TextDelta {
+        text: "first".into(),
+    });
+    key(&mut app, KeyCode::Tab);
+    app.stream(StreamEvent::TextDelta {
+        text: " second".into(),
+    });
+    assert_eq!(app.mode, Mode::Build);
+    assert!(
+        matches!(app.transcript.entries.last(), Some(Entry::Text { mode: Some(Mode::Plan), text, .. }) if text == "first second")
+    );
+}
+
+#[test]
+fn persisted_messages_keep_modes_and_message_boundaries() {
+    use myagent_protocol::{Message, MessagePart, MessageStatus, Role};
+    use myagent_tui::transcript::{Entry, Transcript};
+    let messages = [Mode::Plan, Mode::Build, Mode::Build].map(|mode| Message {
+        id: "fixture".into(),
+        session_id: "session".into(),
+        generation_id: None,
+        role: Role::Assistant,
+        status: MessageStatus::Complete,
+        model: "fixture".into(),
+        mode,
+        content: "reply".into(),
+        parts: vec![MessagePart::Text {
+            text: "reply".into(),
+        }],
+        duration: None,
+        total_tokens: None,
+        created_at: 0,
+    });
+    let transcript = Transcript::history(&messages);
+    assert_eq!(transcript.entries.len(), 3);
+    for (entry, message) in transcript.entries.iter().zip(&messages) {
+        assert!(
+            matches!(entry, Entry::Text { mode: Some(mode), text, .. } if *mode == message.mode && text == "reply")
+        );
+    }
+    let mut plain = messages[0].clone();
+    plain.parts.clear();
+    assert!(matches!(
+        &Transcript::history(&[plain]).entries[0],
+        Entry::Text {
+            mode: Some(Mode::Plan),
+            ..
+        }
+    ));
+}

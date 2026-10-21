@@ -1,26 +1,27 @@
 ---
 source: crates/tui/tests/rendering.rs
+assertion_line: 62
 expression: "capture(&mut app, 110, 25)"
 ---
-My-Agent  │  my-agent / feat/m6-tui  │  Ollama · local  │                                   PLAN   [BUILD]
+My-Agent  │  My-Agent  │  Ollama · local  │                                                 PLAN   [BUILD]
 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
-┌ Aprovação necessária · edit_file ──────────────────────────────────────────────────────────────────────────┐
-│Paths: src/a.rs                                                                                             │
-│path: src/a.rs                                                                                              │
-│--- src/a.rs                                                                                                │
-│+++ src/a.rs                                                                                                │
-│- old                                                                                                       │
-│+ new                                                                                                       │
-│                                                                                                            │
-│                                                                                                            │
-│                                                                                                            │
-│                                                                                                            │
-│Y uma vez   A nesta sessão   N negar                                                                        │
-│Prévia limitada: 1000 linhas / 80 mil caracteres. Enter/Tab não aprovam.                                    │
-│↑↓ PgUp/PgDn mouse · linha 1/1                                                                              │
-└────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+     ┌ Aprovação · edit_file ───────────────────────────────────────────────────────────────────────────┐
+     │Paths: src/a.rs                                                                                   │
+     │                                                                                                  │
+     │path: src/a.rs                                                                                    │
+     │--- src/a.rs                                                                                      │
+     │+++ src/a.rs                                                                                      │
+     │- old                                                                                             │
+     │+ new                                                                                             │
+     │                                                                                                  │
+     │Y uma vez   A nesta sessão   N negar                                                              │
+     │Enter/Tab não aprovam · Esc/Ctrl+C interrompem                                                    │
+     │Prévia limitada: 1000 linhas / 80 mil caracteres. Negue e peça uma ação menor para revisar tudo.  │
+     │↑↓ PgUp/PgDn mouse · rolar prévia                                                                 │
+     └──────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┃ Mensagem ──────────────────────────────────────────────────────────────────────────────────────────────────┐
 ┃ Digite sua mensagem para o My-Agent...                                                                     │
+┃                                                                                                            │
 ┃                                                                                                            │
 ┃────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 Tokens: 2.4M / 10M · 24%        ███████████████████

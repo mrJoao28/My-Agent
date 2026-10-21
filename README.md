@@ -5,13 +5,14 @@ originalmente desenvolvido em TypeScript/Bun. O objetivo é paridade funcional
 com uma arquitetura idiomática em Rust, para Windows, Linux e macOS.
 
 O repositório contém um workspace com nove crates: protocol, core, providers,
-tools, platform, sandbox, store, tui e cli. O binário `myagent` oferece apenas ajuda e
-versão. As bibliotecas incluem contratos, SQLite local e o núcleo de geração
+tools, platform, sandbox, store, tui e cli. O binário `myagent` abre uma TUI
+Grafite com sessões, PLAN/BUILD, prévias de código, aprovações e `/undo`.
+As bibliotecas incluem contratos, SQLite local e o núcleo de geração
 com providers Anthropic, OpenAI, Google e Ollama, além de 17 ferramentas
 locais de inspeção e nove ferramentas de alteração com aprovação e checkpoints.
 As bibliotecas também oferecem dois adapters web com aprovação por origem e
-três comandos exclusivamente em Docker. Conversa e diálogos na CLI/TUI
-continuam para o milestone de interface.
+três comandos exclusivamente em Docker. O diálogo de conta ChatGPT informa
+que sua autenticação será conectada no M7.
 O tipo Mode prevê evolução, mas somente Plan e Build estão declarados.
 
 A arquitetura está aceita no [ADR 0001](docs/adr/0001-arquitetura.md): canais
@@ -23,6 +24,7 @@ Providers, configuração de modelos, limites e testes simulados estão em
 Ferramentas, limites e proteções estão em [Inspeção M3](docs/tools.md).
 Consentimento, checkpoints e desfazer estão em [Alterações M4](docs/mutations.md).
 Isolamento, runners e proteção SSRF estão em [Sandbox e web M5](docs/sandbox-web.md).
+Uso, teclado, temas e validação da interface estão em [TUI Grafite M6](docs/tui.md).
 As escolhas e alternativas estão justificadas no ADR.
 Consulte a [matriz de paridade](docs/PARITY.md) para comportamentos e testes a portar.
 
@@ -40,7 +42,13 @@ cargo clippy --locked --workspace --all-targets -- -D warnings
 cargo test --locked --workspace
 cargo run --locked -p myagent-cli --bin myagent -- --help
 cargo run --locked -p myagent-cli --bin myagent -- --version
+cargo run --locked -p myagent-cli --bin myagent -- --demo
 ```
+
+`--demo` demonstra os painéis de código, aprovações e undo em um projeto
+temporário, sem chave de API. Para usar no projeto atual, execute o mesmo
+comando sem `--demo`; `--new` inicia nova sessão. Configure modelos/providers
+conforme [Gerações M2](docs/generations.md).
 
 O CI está configurado para executar esses gates em Windows, Linux e macOS.
 Uma execução local em Windows não comprova os outros dois sistemas. Os

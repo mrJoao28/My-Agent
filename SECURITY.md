@@ -2,8 +2,9 @@
 
 O My-Agent está em desenvolvimento. As bibliotecas implementam o núcleo de
 geração, persistência, ferramentas, aprovações, checkpoints e adapters Docker
-e web. A CLI ainda oferece apenas ajuda e versão; a interface de conversa
-permanece pendente. Controles implementados e limites de validação estão em
+e web. A TUI liga esses contratos a sessões, geração e aprovações explícitas.
+Prévias parciais de código são somente exibição e nunca executam ferramentas.
+Controles implementados e limites de validação estão em
 [docs/PARITY.md](docs/PARITY.md).
 
 No macOS, somente os aliases de sistema `/var` → `/private/var` e

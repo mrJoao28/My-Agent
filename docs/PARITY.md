@@ -132,17 +132,17 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 
 | ID | Área | Funcionalidade confirmada no código | Onde está no legado | Status | Testes legados correspondentes |
 | --- | --- | --- | --- | --- | --- |
-| CLI-01 | Entrada | `myagent` retoma última sessão do workspace ou cria; `--new` força nova; launcher integra backend em porta livre e CUI com token efêmero; SIGINT/SIGTERM e cleanup. Bun/Node são detalhes do legado a substituir. | `M/cli.ts`, `packages/myagent/bin/myagent.js`, `S/index.ts`, `C/index.tsx` | pendente | `M/launcher.test.ts`, `M/options.test.ts`, `S/launcher.test.ts`, `scripts/workspace-lock.test.ts` |
+| CLI-01 | Entrada | `myagent` retoma última sessão do workspace ou cria; `--new` força nova; launcher integra backend em porta livre e CUI com token efêmero; SIGINT/SIGTERM e cleanup. Bun/Node são detalhes do legado a substituir. | `M/cli.ts`, `packages/myagent/bin/myagent.js`, `S/index.ts`, `C/index.tsx` | em andamento | `M/launcher.test.ts`, `M/options.test.ts`, `S/launcher.test.ts`, `scripts/workspace-lock.test.ts` |
 | CLI-02 | Resume | `resume` escolhe sessão da pasta, `resume --all` permite outras pastas e troca workspace; seleção/aborto e validação. | `M/resume.ts`, `M/options.ts`, `S/services/workspace-sessions.ts` | pendente | `M/options.test.ts`, `S/services/workspace-sessions.test.ts`; sem teste dedicado da seleção interativa em resume.ts identificado |
 | CLI-03 | Doctor | Diagnóstico de runtime, diretório gravável, SQLite/migrations, Docker/imagem, ferramentas detectadas versus imagem e configuração de modelos sem valores de chaves. O doctor legado pode escrever/migrar: não foi executado nesta inspeção. | `M/doctor.ts`, `M/doctor-tools.ts` | pendente | `M/doctor-tools.test.ts`, `S/security/docker-availability.test.ts`; sem teste completo do comando doctor identificado |
 | CLI-04 | Headless | `exec` cria sessão nova, prompt até 9.000 caracteres, mode/model, JSONL opcional, permissões explícitas e allow-push; exits 0 sucesso, 1 falha, 3 negação e 130 cancelamento. | `M/options.ts`, `M/exec.ts` | pendente | `M/exec.test.ts` (inclui HTTP → geração → SDK → tools simulados) |
 | CLI-05 | Ajuda/versão | `--help`/`-h`, `--version`/`-v`, rejeição de argumentos ambíguos/duplicados/inválidos; ajuda não abre banco nem providers. | `M/options.ts`, `M/cli.ts` | em andamento | `M/options.test.ts`, `M/launcher.test.ts`, `M/exec.test.ts`; início do port em `crates/cli/tests/cli.rs`, ainda sem os demais comandos |
-| UI-01 | Telas | Home, nova sessão e sessão/histórico; shell compartilhado, título/caminho, mensagens usuário/assistente/erro, reasoning/ferramentas, avisos e interrupção visível. | `C/screens/home.tsx`, `C/screens/new-session.tsx`, `C/screens/session.tsx`, `C/components/messages/bot-message.tsx`, `C/components/session-shell.tsx` | pendente | `C/screens/session-render.test.tsx`, `C/components/session-shell.test.tsx`, `C/hooks/use-chat.test.tsx`, `scripts/cui-text.test.ts` |
-| UI-02 | Entrada | Texto multilinha, Ctrl+J para quebra, Enter para envio, Tab para modo, autocomplete de menções @ a arquivos/diretórios e comandos /; limite de mensagem e bloqueio durante aprovação/retomada. | `C/components/input-bar.tsx`, `C/components/command-menu/use-command-menu.ts` | pendente | `C/components/session-shell.test.tsx`, `C/dialogs/agents-dialog.test.tsx`, `C/components/approval-panel.test.tsx`; sem suíte dedicada completa de menções identificada |
-| UI-03 | Menu de comandos | `/undo`, `/sessions`, `/theme`, `/models`, `/agents`, `/exit`, `/new`; filtro, seleção e navegação. `/agents` alterna modos, não agentes autônomos. | `C/components/command-menu/commands.tsx`, `C/components/command-menu/filter-commands.ts`, `C/components/command-menu/index.tsx` | pendente | `C/dialogs/agents-dialog.test.tsx`, `C/dialogs/models-dialog.test.tsx`, `C/components/approval-undo.test.tsx`; sem teste dedicado de todo o menu identificado |
-| UI-04 | Diálogos/foco | Sessões, modelos, modos/agentes, temas e contas ChatGPT; busca/lista, camadas de teclado, Enter/Esc/Tab/Ctrl+C sem acionar input de fundo; toast e erros de rota. | `C/dialogs/index.tsx`, `C/dialogs/sessions-dialog.tsx`, `C/dialogs/models-dialog.tsx`, `C/dialogs/agents-dialog.tsx`, `C/dialogs/theme-dialog.tsx`, `C/dialogs/chatgpt-dialog.tsx`, `C/providers/keyboard-layer/index.tsx`, `C/providers/dialog/index.tsx`, `C/components/route-error.tsx` | pendente | `C/dialogs/agents-dialog.test.tsx`, `C/dialogs/models-dialog.test.tsx`, `C/components/approval-panel.test.tsx`, `C/components/resume-panel.test.tsx`; cobertura não é completa para todos os diálogos |
-| UI-05 | Temas | Paletas claras/escuras, Nightfox padrão, seleção e persistência global em preferences.json; falha de preferência não impede interface. | `C/theme.ts`, `C/providers/theme/index.tsx`, `C/dialogs/theme-dialog.tsx` | pendente | `C/components/token-usage-bar.test.tsx`, `C/components/session-shell.test.tsx`; sem teste dedicado de persistência do tema identificado |
-| UI-06 | Uso/status | Barra de tokens acumulados com cores do tema e formatos k/M, escala visual de 1 milhão sem limitar consumo/contexto; status, duração, modo em execução e aviso de comandos indisponíveis. | `C/components/token-usage-bar.tsx`, `C/lib/token-usage.ts`, `C/components/status-bar.tsx`, `C/components/session-shell.tsx` | pendente | `C/lib/token-usage.test.ts`, `C/components/token-usage-bar.test.tsx`, `C/components/session-shell.test.tsx` |
+| UI-01 | Telas | Home, nova sessão e sessão/histórico; shell compartilhado, título/caminho, mensagens usuário/assistente/erro, reasoning/ferramentas, avisos e interrupção visível. | `C/screens/home.tsx`, `C/screens/new-session.tsx`, `C/screens/session.tsx`, `C/components/messages/bot-message.tsx`, `C/components/session-shell.tsx` | feito | `C/screens/session-render.test.tsx`, `C/components/session-shell.test.tsx`, `C/hooks/use-chat.test.tsx`, `scripts/cui-text.test.ts` |
+| UI-02 | Entrada | Texto multilinha, Ctrl+J para quebra, Enter para envio, Tab para modo, autocomplete de menções @ a arquivos/diretórios e comandos /; limite de mensagem e bloqueio durante aprovação/retomada. | `C/components/input-bar.tsx`, `C/components/command-menu/use-command-menu.ts` | em andamento | `C/components/session-shell.test.tsx`, `C/dialogs/agents-dialog.test.tsx`, `C/components/approval-panel.test.tsx`; sem suíte dedicada completa de menções identificada |
+| UI-03 | Menu de comandos | `/undo`, `/sessions`, `/theme`, `/models`, `/agents`, `/exit`, `/new`; filtro, seleção e navegação. `/agents` alterna modos, não agentes autônomos. | `C/components/command-menu/commands.tsx`, `C/components/command-menu/filter-commands.ts`, `C/components/command-menu/index.tsx` | feito | `C/dialogs/agents-dialog.test.tsx`, `C/dialogs/models-dialog.test.tsx`, `C/components/approval-undo.test.tsx`; sem teste dedicado de todo o menu identificado |
+| UI-04 | Diálogos/foco | Sessões, modelos, modos/agentes, temas e contas ChatGPT; busca/lista, camadas de teclado, Enter/Esc/Tab/Ctrl+C sem acionar input de fundo; toast e erros de rota. | `C/dialogs/index.tsx`, `C/dialogs/sessions-dialog.tsx`, `C/dialogs/models-dialog.tsx`, `C/dialogs/agents-dialog.tsx`, `C/dialogs/theme-dialog.tsx`, `C/dialogs/chatgpt-dialog.tsx`, `C/providers/keyboard-layer/index.tsx`, `C/providers/dialog/index.tsx`, `C/components/route-error.tsx` | em andamento | `C/dialogs/agents-dialog.test.tsx`, `C/dialogs/models-dialog.test.tsx`, `C/components/approval-panel.test.tsx`, `C/components/resume-panel.test.tsx`; cobertura não é completa para todos os diálogos |
+| UI-05 | Temas | Paletas claras/escuras, Nightfox padrão, seleção e persistência global em preferences.json; falha de preferência não impede interface. | `C/theme.ts`, `C/providers/theme/index.tsx`, `C/dialogs/theme-dialog.tsx` | feito | `C/components/token-usage-bar.test.tsx`, `C/components/session-shell.test.tsx`; sem teste dedicado de persistência do tema identificado |
+| UI-06 | Uso/status | Barra de tokens acumulados com cores do tema e formatos k/M, escala visual de 1 milhão sem limitar consumo/contexto; status, duração, modo em execução e aviso de comandos indisponíveis. | `C/components/token-usage-bar.tsx`, `C/lib/token-usage.ts`, `C/components/status-bar.tsx`, `C/components/session-shell.tsx` | em andamento | `C/lib/token-usage.test.ts`, `C/components/token-usage-bar.test.tsx`, `C/components/session-shell.test.tsx` |
 | UI-07 | Navegador | Abrir URL de autenticação no navegador por plataforma com validação e diagnóstico de falha, sem shell arbitrário. | `C/lib/open-browser.ts`, `C/dialogs/chatgpt-dialog.tsx` | pendente | `C/lib/open-browser.test.ts` |
 | API-01 | API local | Bind loopback, token privado/efêmero, negar Origin de navegador e Host externo/rebinding, limite de corpo 1 MiB e validação de workspace/proprietário. Não é serviço multiusuário. | `S/index.ts`, `S/security/auth.ts`, `S/security/workspaces.ts`, `H/local-auth.ts`, `C/lib/api-client.ts` | pendente | `S/security/auth.test.ts`, `S/routes/sessions.test.ts`, `S/launcher.test.ts`, `S/lib/chatgpt.test.ts` |
 | API-02 | Contratos | Rotas locais de sessões, chat/retomada/undo, aprovações, modelos/chaves e ChatGPT; erros/validação HTTP e SSE. Preservar comportamento sem obrigar a mesma separação cliente/servidor em Rust. | `S/routes/chat.ts`, `S/routes/permissions.ts`, `S/routes/sessions.ts`, `S/routes/models.ts`, `S/routes/chatgpt.ts`, `C/lib/http-errors.ts` | pendente | `S/routes/sessions.test.ts`, `S/services/chat-recovery.test.ts`, `M/exec.test.ts`, `S/lib/chatgpt.test.ts`, `C/hooks/use-chat.test.tsx` |
@@ -1026,7 +1026,7 @@ Windows/macOS não foram executados nativamente nesta máquina; os resultados
 remotos devem ser conferidos no workflow CI do commit correspondente.
 Docker real e providers externos não foram executados.
 
-## M6 — TUI Grafite (em implementação)
+## M6 — TUI Grafite (implementação entregue; validação manual Windows pendente)
 
 O usuário autorizou a branch feat/m6-tui, commits por etapa e merge após
 validação. O layout escolhido mantém PLAN/BUILD no cabeçalho (sem Tab
@@ -1084,3 +1084,43 @@ mas mantém SQLite, checkpoint, autorização e undo reais em temporários
 descartáveis. Testes cobrem duas escritas, cancelamento, PLAN, escopo e uso.
 tempfile agora também atende essa demonstração isolada na CLI; tokio e
 serde_json reutilizam dependências existentes para tarefas e contratos.
+
+Etapas 8–9: após um panic de worker a TUI encerra sem redesenhar sobre o
+terminal já restaurado, aguardando as demais tarefas. A demonstração envia
+nome de arquivo antes do conteúdo para permitir observar o crescimento do
+painel. Regressões adicionais cobrem rolagem isolada de aprovação (teclas e
+mouse), limite Unicode de 80 mil unidades, alvos das ações e associação de
+resultado ao painel correto: uma prévia nunca significa arquivo aplicado.
+
+### Fechamento M6
+
+Implementação, comandos e roteiro manual estão em [tui.md](tui.md). O
+usuário autorizou commits/push/PR/merge neste fluxo; por isso não se repete
+a solicitação de autorização prevista no fechamento padrão.
+
+Gates locais do fechamento, em Linux/Rust 1.99.1: cargo fmt --all --check,
+cargo check --locked --workspace --all-targets,
+cargo clippy --locked --workspace --all-targets -- -D warnings e
+cargo test --locked --workspace passaram. Resultado: **193 testes
+aprovados, zero falhas e um teste Docker real ignorado**. O teste ignorado
+não conta como validação Docker.
+
+| Item | Verificado | Limite |
+| --- | --- | --- |
+| Layout Grafite | PLAN/BUILD no cabeçalho sem Tab repetido; indicador lateral na entrada; uma barra de 10M; retângulos sucessivos por arquivo | A imagem de referência anterior não estava disponível; o layout segue a descrição aprovada. |
+| Telas/estado | TestBackend e cinco snapshots insta; home, nova sessão, sessão, aprovação e diálogo de tema; NO_COLOR e resize | Não equivale a comparação direta com o legado. |
+| Aprovações/foco | Y/A/N e M específico; Enter/Tab nunca aprovam; diálogo prioritário; setas/Pg/mouse; prévia limitada | Bash com driver Docker simulado; nenhum container real executado. |
+| Core integrado | Provider fictício com Agent, SQLite, duas escritas aprovadas, PLAN, cancelamento, uso e /undo reais em temporários | Nenhum provider externo/chave real utilizado. |
+| Terminal Linux | Interação em PTY a 80×24 e smoke a 120×40; preview incremental, Enter/Tab bloqueados, Y, dois arquivos, /undo, temas/modelos/agents/conta/sessões, nova sessão, Esc/Ctrl+C, resize e SIGTERM | Terminal cloud/PTY, não uma sessão gráfica de Windows Terminal. |
+| Restauração | Probe normal e panic intencional: flags termios iguais antes/depois, cursor mostrado e alternate screen encerrada | SIGKILL/encerramento forçado do SO não executa cleanup. |
+| CI multiplataforma | [Workflow 39668919756](https://github.com/mrJoao28/My-Agent/actions/runs/39668919756): fmt, check, Clippy e testes passaram em Windows, Linux e macOS no commit d775cca | CI do fechamento deve ser consultado no [PR #8](https://github.com/mrJoao28/My-Agent/pull/8). |
+| Windows Terminal/PowerShell | Não executado manualmente neste ambiente | Roteiro reproduzível com --demo em tui.md; verificação visual/teclas do terminal do usuário permanece pendente. |
+
+Os IDs da matriz descrevem toda a paridade histórica, não apenas este
+milestone. UI-01/03/05 estão implementados no escopo solicitado, com Grafite
+padrão por escolha do usuário. UI-02 permanece parcial quanto a sugestões
+de diretórios (a TUI sugere arquivos seguros); UI-04/07 e CHATGPT dependem da
+autenticação real do M7. UI-06 permanece parcial na paridade histórica de
+duração/status; a barra de 10M e o modo em execução estão implementados.
+CLI resume --all/doctor/exec e edição de configurações continuam nos seus
+milestones, sem serem anunciados como disponíveis na TUI.

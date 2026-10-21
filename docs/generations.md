@@ -7,9 +7,9 @@ só traduzem requisições/eventos; não executam ferramentas. StoreJournal faz
 a ponte com SQLite do M1. O core envia I/O bloqueante do journal e das
 instruções para spawn_blocking, sem bloquear o executor assíncrono.
 
-As APIs são de biblioteca. A CLI continua oferecendo ajuda/versão; interface
-de conversa, comandos e TUI entram nos seus milestones. Nenhuma ferramenta
-de arquivos, shell, Git ou web é registrada automaticamente no M2.
+As APIs do M2 são de biblioteca. A [TUI do M6](tui.md) agora compõe core,
+StoreJournal e registros de ferramentas. Nenhuma ferramenta
+de arquivos, shell, Git ou web é registrada automaticamente pela biblioteca M2.
 Ferramentas reais precisam implementar autorização/validação e execução;
 os testes usam implementações fictícias. Learn não foi implementado.
 

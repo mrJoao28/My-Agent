@@ -70,7 +70,7 @@ fn metadata(ws: &SafeWorkspace, b: &Budget) -> Result<()> {
     control_files(ws, ".", b)?;
     Ok(())
 }
-fn control_files(ws: &SafeWorkspace, file: &str, b: &Budget) -> Result<()> {
+pub(crate) fn control_files(ws: &SafeWorkspace, file: &str, b: &Budget) -> Result<()> {
     let mut path = Path::new(file).parent();
     for name in [".gitattributes", ".gitignore", ".mailmap"] {
         ws.resolve_safe_path(name, false)?;
@@ -85,7 +85,7 @@ fn control_files(ws: &SafeWorkspace, file: &str, b: &Budget) -> Result<()> {
     }
     Ok(())
 }
-struct Git {
+pub(crate) struct Git {
     ws: SafeWorkspace,
     filters: Vec<String>,
     cancel: CancellationToken,
@@ -108,7 +108,7 @@ fn executable(ws: &SafeWorkspace) -> Result<PathBuf> {
     Err(Error::Git)
 }
 impl Git {
-    async fn new(ws: &SafeWorkspace, cancel: CancellationToken) -> Result<Self> {
+    pub(crate) async fn new(ws: &SafeWorkspace, cancel: CancellationToken) -> Result<Self> {
         if cancel.is_cancelled() {
             return Err(Error::Cancelled);
         }
@@ -150,7 +150,24 @@ impl Git {
         }
         Ok(git)
     }
-    async fn run(&self, args: Vec<String>, seconds: u64) -> Result<String> {
+    pub(crate) fn for_init(ws: &SafeWorkspace, cancel: CancellationToken) -> Result<Self> {
+        Ok(Self {
+            ws: ws.clone(),
+            filters: vec![],
+            cancel,
+            executable: executable(ws)?,
+        })
+    }
+    pub(crate) async fn run(&self, args: Vec<String>, seconds: u64) -> Result<String> {
+        self.run_policy(args, seconds, false, false).await
+    }
+    pub(crate) async fn run_policy(
+        &self,
+        args: Vec<String>,
+        seconds: u64,
+        global_query: bool,
+        network: bool,
+    ) -> Result<String> {
         if self.cancel.is_cancelled() {
             return Err(Error::Cancelled);
         }
@@ -178,6 +195,30 @@ impl Git {
             .env("GIT_NO_LAZY_FETCH", "1")
             .env("GIT_PAGER", "cat")
             .env("LC_ALL", "C");
+        if global_query || network {
+            for name in [
+                "HOME",
+                "USERPROFILE",
+                "APPDATA",
+                "LOCALAPPDATA",
+                "XDG_CONFIG_HOME",
+                "DBUS_SESSION_BUS_ADDRESS",
+                "XDG_RUNTIME_DIR",
+            ] {
+                if let Some(value) = std::env::var_os(name) {
+                    cmd.env(name, value);
+                }
+            }
+        }
+        if global_query {
+            cmd.env_remove("GIT_CONFIG_GLOBAL");
+        }
+        if network {
+            cmd.env("GCM_INTERACTIVE", "Never").env(
+                "GIT_ASKPASS",
+                if cfg!(windows) { "NUL" } else { "/bin/false" },
+            );
+        }
         // Git for Windows does not interpret Rust's canonical extended prefix here.
         let root = self.ws.root().to_string_lossy();
         let root = root.strip_prefix("\\\\?\\").unwrap_or(&root);

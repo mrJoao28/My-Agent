@@ -31,6 +31,7 @@ pub const TOOL_NAMES: &[&str] = &[
 type Todos = Arc<Mutex<HashMap<String, Value>>>;
 #[derive(Clone)]
 pub struct ToolRegistry {
+    mutations: Option<crate::MutationRegistry>,
     workspace: SafeWorkspace,
     todos: Todos,
     sandbox_configured: bool,
@@ -38,13 +39,14 @@ pub struct ToolRegistry {
 impl ToolRegistry {
     pub fn new(workspace: SafeWorkspace, sandbox_configured: bool) -> Self {
         Self {
+            mutations: None,
             workspace,
             todos: Arc::new(Mutex::new(HashMap::new())),
             sandbox_configured,
         }
     }
     pub fn tools(&self, mode: Mode) -> Vec<Arc<dyn Tool>> {
-        TOOL_NAMES
+        let mut tools: Vec<Arc<dyn Tool>> = TOOL_NAMES
             .iter()
             .map(|name| {
                 Arc::new(Builtin {
@@ -57,7 +59,15 @@ impl ToolRegistry {
                 Mode::Build => true,
                 _ => false,
             })
-            .collect()
+            .collect();
+        if let Some(mutations) = &self.mutations {
+            tools.extend(mutations.tools(mode));
+        }
+        tools
+    }
+    pub fn with_mutations(mut self, mutations: crate::MutationRegistry) -> Self {
+        self.mutations = Some(mutations);
+        self
     }
     pub fn session_todos(&self, session: &str) -> Result<Value> {
         Ok(self
@@ -69,6 +79,9 @@ impl ToolRegistry {
             .unwrap_or_else(|| json!([])))
     }
     pub fn clear_session(&self, session: &str) -> Result<()> {
+        if let Some(mutations) = &self.mutations {
+            mutations.forget_session(session);
+        }
         self.todos
             .lock()
             .map_err(|_| Error::Internal)?
@@ -272,7 +285,7 @@ pub fn schema(name: &str) -> (&'static str, Value) {
         _ => ("Unavailable tool", object(json!({}), &[])),
     }
 }
-fn validate_value(value: &Value, schema: &Value) -> Result<()> {
+pub(crate) fn validate_value(value: &Value, schema: &Value) -> Result<()> {
     if let Some(choices) = schema.get("enum").and_then(Value::as_array)
         && !choices.contains(value)
     {

@@ -16,7 +16,7 @@ impl StoreJournal {
 }
 fn map_error(error: Error) -> AgentError {
     match error {
-        Error::SessionBusy => AgentError::Busy,
+        Error::SessionBusy | Error::GenerationActive => AgentError::Busy,
         Error::LeaseLost => AgentError::LeaseLost,
         _ => AgentError::Persistence,
     }
@@ -67,6 +67,25 @@ impl Store {
     }
 }
 impl Journal for StoreJournal {
+    fn check_session(&self, session: &str, workspace: &str, idle: bool) -> Result<()> {
+        let matches = if cfg!(windows) {
+            workspace.eq_ignore_ascii_case(&self.workspace.path)
+        } else {
+            workspace == self.workspace.path
+        };
+        if !matches {
+            return Err(AgentError::Configuration);
+        }
+        self.store
+            .check_local_session(&self.workspace, session, idle)
+            .map_err(map_error)
+    }
+    fn local_note(&self, session: &str, note: &str) -> Result<()> {
+        self.store
+            .append_undo_note(&self.workspace, session, note)
+            .map(|_| ())
+            .map_err(map_error)
+    }
     fn prepare(&self, input: PrepareGeneration) -> Result<GenerationState> {
         if self
             .store

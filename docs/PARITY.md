@@ -44,8 +44,8 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | MODE-01 | PLAN/BUILD | PLAN recebe apenas ferramentas sem mutação do projeto; BUILD acrescenta escrita, shell e Git de alteração. A lista e a política no backend garantem a restrição. | `S/tools/index.ts`, `S/security/permissions.ts` | em andamento | `S/security/permissions.test.ts`, `S/security/docker-availability.test.ts` |
 | MODE-02 | PLAN/BUILD | CUI inicia em BUILD, isola modo por sessão e restaura o último modo persistido; modelo selecionado é compartilhado. Modo em execução permanece distinguível da próxima mensagem. `exec` inicia em PLAN. | `C/providers/prompt-config/index.tsx`, `C/screens/session.tsx`, `C/components/session-shell.tsx`, `M/options.ts` | pendente | `C/dialogs/agents-dialog.test.tsx`, `C/components/session-shell.test.tsx`, `M/options.test.ts`, `M/exec.test.ts` |
 | PROMPT-01 | Prompts | Builder por modo, workspace, ferramentas efetivamente disponíveis e sandbox; seis blocos de instruções; perfis compacto/completo. Não anunciar capacidades indisponíveis nem tratar texto externo como permissão. | `S/prompts/index.ts`, `S/prompts/system.ts`, `S/prompts/coding.ts`, `S/prompts/editing.ts`, `S/prompts/tool-rules.ts`, `S/services/context-plan.ts` | pendente | `S/prompts/prompts.test.ts`, `S/services/context-plan.test.ts`, `S/services/message-format.test.ts` |
-| PERM-01 | Aprovações | Y permite uma vez, A memoriza por sessão/ferramenta/workspace/escopo, N nega. Enter não aprova; Esc/Ctrl+C interrompem. Prévia rolável de diff, caminho, comando ou URL. | `S/security/permissions.ts`, `S/security/approval-scope.ts`, `S/security/tool-policy.ts`, `C/components/approval-panel.tsx`, `C/components/approval-preview.ts` | pendente | `S/security/permissions.test.ts`, `S/security/approval-scope.test.ts`, `C/components/approval-panel.test.tsx` |
-| PERM-02 | Aprovações | Timeout de 120 s, consumo único, isolamento e limpeza ao cancelar/desconectar; até 256 escopos. A é proibido para delete_file, git_commit, git_init, git_remote_add e git_push. Ferramentas desconhecidas são negadas. | `S/security/permissions.ts`, `H/schemas.ts` | pendente | `S/security/permissions.test.ts`, `S/security/approval-scope.test.ts`, `H/schemas.test.ts` |
+| PERM-01 | Aprovações | Y permite uma vez, A memoriza por sessão/ferramenta/workspace/escopo, N nega. Enter não aprova; Esc/Ctrl+C interrompem. Prévia rolável de diff, caminho, comando ou URL. | `S/security/permissions.ts`, `S/security/approval-scope.ts`, `S/security/tool-policy.ts`, `C/components/approval-panel.tsx`, `C/components/approval-preview.ts` | em andamento | `S/security/permissions.test.ts`, `S/security/approval-scope.test.ts`, `C/components/approval-panel.test.tsx` |
+| PERM-02 | Aprovações | Timeout de 120 s, consumo único, isolamento e limpeza ao cancelar/desconectar; até 256 escopos. A é proibido para delete_file, git_commit, git_init, git_remote_add e git_push. Ferramentas desconhecidas são negadas. | `S/security/permissions.ts`, `H/schemas.ts` | feito | `S/security/permissions.test.ts`, `S/security/approval-scope.test.ts`, `H/schemas.test.ts` |
 | PERM-03 | Automação | `none` autoriza leitura local; `reads` acrescenta web; `all` autoriza ações. Push exige opção separada e não autoaprova main/master. Comandos continuam dependentes de Docker e do modo. | `S/security/permissions.ts`, `M/options.ts`, `M/exec.ts` | pendente | `M/exec.test.ts`, `S/tools/git-workflow.test.ts`, `S/tools/test-tools.test.ts` |
 | GEN-01 | Streaming | Texto, reasoning, chamadas/resultados associados por ID, avisos, uso e estados terminais estruturados; contratos validados; UTF-8/CRLF fragmentados e EOF sem done não equivalem a sucesso. | `H/schemas.ts`, `S/services/stream-service.ts`, `C/lib/chat-events.ts`, `C/hooks/use-chat.ts`, `M/exec.ts` | em andamento | `H/schemas.test.ts`, `S/services/stream-service.test.ts`, `C/lib/chat-events.test.ts`, `C/hooks/use-chat.test.tsx`, `M/exec.test.ts` |
 | GEN-02 | Ciclo da geração | Uma geração ativa por sessão; lock antes de awaits; diferenciar erro, conclusão e interrupção; persistir parciais, propagar cancelamento e aguardar cleanup no encerramento. Falha no SSE terminal não duplica gravação. | `S/services/chat-service.ts`, `S/services/stream-service.ts`, `S/index.ts` | em andamento | `S/services/chat-recovery.test.ts`, `S/services/stream-service.test.ts`, `S/launcher.test.ts` |
@@ -66,10 +66,10 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | INSPECT-01 | Projeto | `project_inspect`: manifests, scripts/dependências, configs e testes por inspeção estática com limites; não executa arquivos de configuração. | `S/tools/project-inspect.ts`, `S/lib/project-inspection.ts` | feito | `S/tools/inspection.test.ts` |
 | INSPECT-02 | Código | `file_outline`: declarações e linhas JS/TS/JSX/TSX por AST em worker. `symbol_search`: busca literal de declarações; não equivale a referências nem resolução de tipos. | `S/tools/file-outline.ts`, `S/tools/symbol-search.ts`, `S/lib/source-analysis.ts`, `S/lib/source-worker.ts` | feito | `S/tools/inspection.test.ts` |
 | INSPECT-03 | Ambiente | `environment_check`: diagnóstico passivo sem processos ou valores de ambiente; não comprova daemon/imagem/ferramentas da sandbox. | `S/tools/environment-check.ts` | feito | `S/tools/inspection.test.ts` |
-| WRITE-01 | Criação | `write_file`: escrita atômica, criação de pais, proteção contra sobrescrita e backup; modo existente preservado, novos arquivos 0644 em POSIX. | `S/tools/write-file.ts` | pendente | `S/tools/files.test.ts`, `S/tools/file-editing.test.ts` |
-| WRITE-02 | Edição | `edit_file`: substituição única, contagem de ocorrências ambíguas/ausentes; compara LF/CRLF e usa EOL dominante no trecho inserido, preservando bytes restantes e modo. | `S/tools/edit-file.ts` | pendente | `S/tools/files.test.ts`, `S/tools/file-editing.test.ts` |
-| WRITE-03 | Árvores | `move_file` e `delete_file`: mover/excluir com validação de descendentes, destino existente e raiz protegida. Exclusão sempre exige aprovação individual. | `S/tools/move-file.ts`, `S/tools/delete-file.ts`, `S/utils/path.ts` | pendente | `S/tools/files.test.ts`, `S/security/checkpoints.test.ts` |
-| WRITE-04 | Patch | `apply_patch`: diff unificado, checkOnly e validação de todos os caminhos antes de alterar; recusa binários, links, rename/copy e caminhos com espaços. | `S/tools/apply-patch.ts` | pendente | `S/tools/git.test.ts`, `S/security/checkpoints.test.ts` |
+| WRITE-01 | Criação | `write_file`: escrita atômica, criação de pais, proteção contra sobrescrita e backup; modo existente preservado, novos arquivos 0644 em POSIX. | `S/tools/write-file.ts` | feito | `S/tools/files.test.ts`, `S/tools/file-editing.test.ts` |
+| WRITE-02 | Edição | `edit_file`: substituição única, contagem de ocorrências ambíguas/ausentes; compara LF/CRLF e usa EOL dominante no trecho inserido, preservando bytes restantes e modo. | `S/tools/edit-file.ts` | feito | `S/tools/files.test.ts`, `S/tools/file-editing.test.ts` |
+| WRITE-03 | Árvores | `move_file` e `delete_file`: mover/excluir com validação de descendentes, destino existente e raiz protegida. Exclusão sempre exige aprovação individual. | `S/tools/move-file.ts`, `S/tools/delete-file.ts`, `S/utils/path.ts` | feito | `S/tools/files.test.ts`, `S/security/checkpoints.test.ts` |
+| WRITE-04 | Patch | `apply_patch`: diff unificado, checkOnly e validação de todos os caminhos antes de alterar; recusa binários, links, rename/copy e caminhos com espaços. | `S/tools/apply-patch.ts` | feito | `S/tools/git.test.ts`, `S/security/checkpoints.test.ts` |
 | TEST-01 | Descoberta | `test_discover`: convenções JS/TS, Python e Go, scripts e indícios de runners, com inspeção limitada; não enumera casos gerados em runtime. | `S/tools/test-discover.ts`, `S/lib/project-inspection.ts` | feito | `S/tools/inspection.test.ts` |
 | TEST-02 | Execução | `test_run`: Bun, Node, Vitest, Jest e Pytest, runners fixos com argumentos escapados; cópia descartável em /tmp, dependências referenciadas somente leitura; timeout/cancelamento/saída limitada; não infere quantidade de testes pelo exit code. | `S/tools/test-run.ts` | pendente | `S/tools/test-tools.test.ts`, `S/security/sandbox.integration.test.ts` |
 | TEST-03 | Tipos | `type_check`: diagnóstico TypeScript, caminhos Windows e linha/coluna; tsc local antes do global, somente na sandbox; disponível também em PLAN com Docker. | `S/tools/type-check.ts` | pendente | `S/services/message-format.test.ts`, `S/security/permissions.test.ts`, `S/security/docker-availability.test.ts` |
@@ -80,12 +80,12 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | ID | Área | Funcionalidade confirmada no código | Onde está no legado | Status | Testes legados correspondentes |
 | --- | --- | --- | --- | --- | --- |
 | GIT-01 | Inspeção | `git_status`, `git_diff`, `git_log`, `git_show`, `git_blame`, `diff_summary`: escopo seguro, staged separado, histórico e atribuição de linhas; não expor caminhos protegidos. | `S/tools/git-status.ts`, `S/tools/git-diff.ts`, `S/tools/git-log.ts`, `S/tools/git-show.ts`, `S/tools/git-blame.ts`, `S/tools/diff-summary.ts`, `S/lib/git-inspection.ts` | feito | `S/tools/git.test.ts`, `S/tools/git-inspection.test.ts`, `S/utils/git-scope.test.ts` |
-| GIT-02 | Commit | `git_commit`: arquivos explícitos, prévia para aprovação individual e preservação de staged fora do escopo; identidade Git existente, sem inventar configuração local. | `S/tools/git-commit.ts`, `S/utils/git.ts` | pendente | `S/tools/git.test.ts`, `S/tools/git-workflow.test.ts`, `S/security/approval-scope.test.ts` |
-| GIT-03 | Bootstrap/branches | `git_init` em main apenas fora de repositórios, `git_switch` cria/troca sem descarte/force, `git_remote_add` HTTPS validado sem substituir URL existente. | `S/tools/git-workflow.ts` | pendente | `S/tools/git-workflow.test.ts` |
-| GIT-04 | Push/sincronização | `git_push` só da branch atual, URL/branch vinculadas à aprovação, sem force/delete/tags; main/master pedem confirmação adicional Y e M. Após push, parar até liberação do usuário. `git_sync` usa fetch sem tags e merge ff-only da principal, com workspace/index limpos. | `S/tools/git-workflow.ts`, `S/security/tool-policy.ts`, `S/services/stream-service.ts`, `C/components/approval-panel.tsx` | pendente | `S/tools/git-workflow.test.ts`, `S/services/stream-service.test.ts`, `C/components/approval-panel.test.tsx` |
+| GIT-02 | Commit | `git_commit`: arquivos explícitos, prévia para aprovação individual e preservação de staged fora do escopo; identidade Git existente, sem inventar configuração local. | `S/tools/git-commit.ts`, `S/utils/git.ts` | feito | `S/tools/git.test.ts`, `S/tools/git-workflow.test.ts`, `S/security/approval-scope.test.ts` |
+| GIT-03 | Bootstrap/branches | `git_init` em main apenas fora de repositórios, `git_switch` cria/troca sem descarte/force, `git_remote_add` HTTPS validado sem substituir URL existente. | `S/tools/git-workflow.ts` | em andamento | `S/tools/git-workflow.test.ts` |
+| GIT-04 | Push/sincronização | `git_push` só da branch atual, URL/branch vinculadas à aprovação, sem force/delete/tags; main/master pedem confirmação adicional Y e M. Após push, parar até liberação do usuário. `git_sync` usa fetch sem tags e merge ff-only da principal, com workspace/index limpos. | `S/tools/git-workflow.ts`, `S/security/tool-policy.ts`, `S/services/stream-service.ts`, `C/components/approval-panel.tsx` | em andamento | `S/tools/git-workflow.test.ts`, `S/services/stream-service.test.ts`, `C/components/approval-panel.test.tsx` |
 | GIT-05 | Isolamento Git | Worktree explícita, ambiente reduzido; hooks/filtros/assinatura/pager/fsmonitor/diffs externos desativados; recusa metadata externa, links e alternates. Escritas Git serializadas. | `S/utils/git.ts`, `S/security/tool-policy.ts` | em andamento | `S/utils/git-scope.test.ts`, `S/tools/git.test.ts`, `S/tools/git-inspection.test.ts`, `S/tools/git-workflow.test.ts` |
-| UNDO-01 | Checkpoints | Checkpoint privado global por sessão antes de mutações de arquivos em BUILD; preserva bytes, EOL e modos; limites por arquivo/passo/store; inclui undo após falhas parciais. Não é commit Git nem snapshot de todo efeito externo. | `S/security/checkpoints.ts`, `S/security/tool-policy.ts` | pendente | `S/security/checkpoints.test.ts` |
-| UNDO-02 | /undo | Desfaz último passo sem sobrescrever alterações posteriores; recusa conflito/geração ativa, valida workspace/lease, persiste nota para invalidar evidência anterior. Não cria commits. | `S/services/chat-service.ts`, `C/hooks/use-chat.ts`, `C/components/command-menu/commands.tsx` | pendente | `S/security/checkpoints.test.ts`, `S/services/chat-recovery.test.ts`, `C/components/approval-undo.test.tsx` |
+| UNDO-01 | Checkpoints | Checkpoint privado global por sessão antes de mutações de arquivos em BUILD; preserva bytes, EOL e modos; limites por arquivo/passo/store; inclui undo após falhas parciais. Não é commit Git nem snapshot de todo efeito externo. | `S/security/checkpoints.ts`, `S/security/tool-policy.ts` | feito | `S/security/checkpoints.test.ts` |
+| UNDO-02 | /undo | Desfaz último passo sem sobrescrever alterações posteriores; recusa conflito/geração ativa, valida workspace/lease, persiste nota para invalidar evidência anterior. Não cria commits. | `S/services/chat-service.ts`, `C/hooks/use-chat.ts`, `C/components/command-menu/commands.tsx` | em andamento | `S/security/checkpoints.test.ts`, `S/services/chat-recovery.test.ts`, `C/components/approval-undo.test.tsx` |
 | BOX-01 | Disponibilidade | Docker opcional para abrir o app; sem daemon não registrar bash/type_check/test_run. Verificação limitada, imagem padrão Bun, preparação/pull sob demanda e progresso, depois pull=never. | `S/security/sandbox.ts`, `S/index.ts`, `S/tools/index.ts`, `M/doctor.ts` | pendente | `S/security/docker-availability.test.ts`, `S/security/sandbox.test.ts`, `S/launcher.test.ts` |
 | BOX-02 | Container | Rede desativada, rootfs e bind mount somente leitura, usuário não root, capabilities removidas, no-new-privileges, tmpfs privado e limites de CPU/memória/processos. Cancelamento/timeout encerram processos/container. | `S/security/sandbox.ts` | pendente | `S/security/sandbox.test.ts`, `S/security/sandbox.integration.test.ts` |
 | BOX-03 | Snapshot | Cópia filtrada, sem metadata Git, segredos, links e builds; limites por arquivo/bytes/entradas/profundidade. Dependências omitidas por padrão; opt-in filtrado para node_modules/.venv e tratamento restrito de .bin. | `S/security/snapshot.ts` | pendente | `S/security/snapshot.test.ts`, `S/security/sandbox.integration.test.ts` |
@@ -785,3 +785,102 @@ O git add foi recusado por falta de permissão para criar .git/index.lock.
 O staged está vazio nesta preparação; o usuário deve prepará-lo no seu
 terminal, e seus blobs precisam de revisão antes de qualquer commit.
 Nenhum commit, push ou PR deste milestone foi executado.
+
+## M4 — alterações com consentimento e desfazer
+
+Implementadas as nove ferramentas solicitadas, ApprovalManager por sessão,
+checkpoints de bytes e metadados, executor Git protegido e API local de `/undo`.
+Contratos, limites, diferenças do patch e justificativa do acesso nativo ao
+ctime Windows estão em [mutations.md](mutations.md).
+PLAN continua sem ferramentas de alteração na lista montada pelo código.
+A conexão dos diálogos e do comando local à CLI/TUI permanece pendente.
+
+A validação final no Windows passou com **138 testes, zero falhas e zero
+ignorados**: CLI 3, core 9, protocol 5, providers 16, sandbox 4, store 4,
+gerações 20, persistência 12, ferramentas unitários 7, instruções 3,
+mutações 30 e ferramentas somente leitura 25.
+
+Os testes cobrem Y/A/N, confirmação adicional M para main/master, isolamento,
+timeout, cancelamento e limite de 256 escopos; checkpoint e falha parcial,
+CRLF, binários, identidade/modo/mtime/ctime, conflito em todos os caminhos,
+lease perdido, geração ativa, concorrência e limites de armazenamento;
+patch multiarquivo/checkOnly sem tocar no índice; commit seletivo inclusive
+de exclusões e push com transporte simulado. Provider e push foram simulados,
+sem chamadas pagas ou push real. Testes Bun do legado não foram executados.
+
+Na tentativa da suíte completa, o diretório de build reutilizado apresentou
+erro de linker LNK1104. Um novo diretório de build apresentou falta de espaço
+em disco (erro 112), antes de concluir a compilação. São falhas de ambiente;
+a compilação foi retomada após o usuário liberar espaço.
+
+A suíte completa revelou uma falha real na restauração Windows: um componente
+vazio acrescentava uma barra ao caminho do arquivo antes de restaurar suas
+permissões. A correção preserva o caminho raiz sem essa barra e passou na
+suíte final. Diagnósticos temporários foram removidos.
+
+Gates finais executados com CARGO_HOME=.cargo-cache e target/m4-gates:
+
+- `cargo fmt --all --check`: passou.
+- `cargo clippy --locked --offline --workspace --all-targets -- -D warnings`: passou.
+- `cargo test --locked --offline --workspace --config 'profile.test.package.myagent-tools.codegen-units=15'`: passou.
+
+Nesta validação, CARGO_PROFILE_DEV_DEBUG=0, CARGO_PROFILE_TEST_DEBUG=0 e
+CARGO_INCREMENTAL=0 reduziram uso de disco. O override de codegen-units
+somente para tools gerou outro executável após LNK1104 ao sobrescrever o
+anterior. Não mudou fontes, features, assertions nem seleção de testes.
+Nenhum ajuste de perfil foi gravado na configuração do repositório.
+
+O CI existente contempla Windows, Linux e macOS; os dois últimos não foram
+executados localmente nem houve execução remota do M4. A interface de
+diálogos e `/undo` na CLI/TUI permanece para seu milestone; a API local está
+pronta. `git_switch`, `git_sync`, web e bash continuam pendentes, fora deste
+escopo. O parser próprio de patches e a exceção unsafe isolada em platform
+estão justificados em mutations.md e na adenda do ADR.
+
+Cargo metadata confirmou nove crates sem ciclos e licenças MIT/Apache-2.0
+nas dependências adicionadas; cargo-deny não foi executado. A revisão dos
+27 arquivos alterados/novos não encontrou nomes proibidos nem padrões comuns
+de credenciais. Isso não garante detectar todo segredo possível; o staged
+deve ser conferido novamente antes de cada commit.
+
+Commit proposto: `feat: add approved mutations and checkpoint undo`.
+Nenhum commit, push ou PR do M4 foi executado pelo assistente.
+
+### Preparação do commit M4
+
+O git add dos 27 arquivos foi recusado por falta de permissão para criar
+`.git/index.lock`; o staged permanece vazio. Após o usuário preparar os
+arquivos no terminal, os blobs staged devem ser conferidos novamente antes
+do commit autorizado. A conferência final de formatação, UTF-8/LF e
+`git diff --check` passou; não houve alteração de implementação depois dos
+gates finais.
+
+Arquivos para revisão e commit:
+
+- `Cargo.lock`
+- `Cargo.toml`
+- `README.md`
+- `crates/core/src/agent.rs`
+- `crates/core/src/lib.rs`
+- `crates/core/src/ports.rs`
+- `crates/platform/Cargo.toml`
+- `crates/platform/src/lib.rs`
+- `crates/store/src/journal.rs`
+- `crates/store/src/services.rs`
+- `crates/tools/Cargo.toml`
+- `crates/tools/src/approval.rs`
+- `crates/tools/src/checkpoints.rs`
+- `crates/tools/src/file_mutations.rs`
+- `crates/tools/src/git.rs`
+- `crates/tools/src/git_mutations.rs`
+- `crates/tools/src/lib.rs`
+- `crates/tools/src/mutation_io.rs`
+- `crates/tools/src/mutations.rs`
+- `crates/tools/src/registry.rs`
+- `crates/tools/tests/mutations.rs`
+- `crates/tools/tests/read_only.rs`
+- `docs/PARITY.md`
+- `docs/adr/0001-arquitetura.md`
+- `docs/mutations.md`
+- `docs/persistence.md`
+- `docs/tools.md`

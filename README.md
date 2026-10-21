@@ -4,12 +4,13 @@ Reescrita em Rust do My-Code-Agent, assistente de programação de terminal
 originalmente desenvolvido em TypeScript/Bun. O objetivo é paridade funcional
 com uma arquitetura idiomática em Rust, para Windows, Linux e macOS.
 
-O repositório contém um workspace com oito crates: protocol, core, providers,
-tools, sandbox, store, tui e cli. O binário `myagent` oferece apenas ajuda e
+O repositório contém um workspace com nove crates: protocol, core, providers,
+tools, platform, sandbox, store, tui e cli. O binário `myagent` oferece apenas ajuda e
 versão. As bibliotecas incluem contratos, SQLite local e o núcleo de geração
 com providers Anthropic, OpenAI, Google e Ollama, além de 17 ferramentas
-locais de inspeção. Conversa na CLI/TUI, escrita, web e execução de
-processos do projeto continuam para os próximos milestones.
+locais de inspeção e nove ferramentas de alteração com aprovação e checkpoints.
+Conversa e diálogos na CLI/TUI, web e execução de processos do projeto
+continuam para os próximos milestones.
 O tipo Mode prevê evolução, mas somente Plan e Build estão declarados.
 
 A arquitetura está aceita no [ADR 0001](docs/adr/0001-arquitetura.md): canais
@@ -19,6 +20,7 @@ do store estão descritos em [Persistência M1](docs/persistence.md).
 Providers, configuração de modelos, limites e testes simulados estão em
 [Gerações M2](docs/generations.md).
 Ferramentas, limites e proteções estão em [Inspeção M3](docs/tools.md).
+Consentimento, checkpoints e desfazer estão em [Alterações M4](docs/mutations.md).
 As escolhas e alternativas estão justificadas no ADR.
 Consulte a [matriz de paridade](docs/PARITY.md) para comportamentos e testes a portar.
 

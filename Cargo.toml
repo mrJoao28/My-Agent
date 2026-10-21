@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/protocol",
+    "crates/platform",
     "crates/core",
     "crates/providers",
     "crates/tools",
@@ -30,6 +31,7 @@ thiserror = "2.0"
 clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context"] }
 tempfile = "3.0"
 myagent-protocol = { path = "crates/protocol" }
+myagent-platform = { path = "crates/platform" }
 myagent-core = { path = "crates/core" }
 myagent-providers = { path = "crates/providers" }
 myagent-tools = { path = "crates/tools" }

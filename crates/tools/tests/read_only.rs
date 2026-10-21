@@ -40,6 +40,8 @@ fn context(id: &str) -> ToolContext {
     ToolContext {
         session_id: id.into(),
         cancellation: CancellationToken::new(),
+        tool_call_id: "fixture-call".into(),
+        events: None,
     }
 }
 #[test]

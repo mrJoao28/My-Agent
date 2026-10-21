@@ -1,15 +1,28 @@
 #![forbid(unsafe_code)]
 //! Ferramentas de inspeção com autorização de workspace e limites nas bordas.
+mod approval;
+mod checkpoints;
+mod file_mutations;
 mod files;
 mod git;
+mod git_mutations;
 mod inspect;
 mod instructions;
 mod io;
+mod mutation_io;
+mod mutations;
 mod path;
 mod registry;
 mod search;
 mod source;
+pub use approval::{ApprovalDecision, ApprovalGrant, ApprovalManager};
+pub use checkpoints::{
+    CHECKPOINT_FILE_BYTES, CHECKPOINT_SESSION_BYTES, CHECKPOINT_STEP_BYTES, CheckpointStore,
+    UndoResult,
+};
+pub use git_mutations::{GitSettings, NativePush, PushRequest, PushTransport, validate_git_url};
 pub use instructions::FilesystemInstructions;
+pub use mutations::{MUTATION_NAMES, MutationRegistry};
 pub use path::{SafeWorkspace, is_sensitive_path};
 pub use registry::{TOOL_NAMES, ToolRegistry, schema};
 
@@ -66,6 +79,38 @@ pub enum Error {
     Io,
     #[error("INTERNAL_ERROR")]
     Internal,
+    #[error("APPROVAL_DENIED")]
+    Denied,
+    #[error("APPROVAL_EXPIRED")]
+    ApprovalExpired,
+    #[error("APPROVAL_SCOPE_LIMIT")]
+    ScopeLimit,
+    #[error("STALE_APPROVAL")]
+    StaleApproval,
+    #[error("CHECKPOINT_LIMIT")]
+    CheckpointLimit,
+    #[error("INVALID_CHECKPOINT")]
+    InvalidCheckpoint,
+    #[error("INCOMPLETE_CHECKPOINT")]
+    IncompleteCheckpoint,
+    #[error("NO_CHECKPOINT")]
+    NoCheckpoint,
+    #[error("UNDO_CONFLICT")]
+    Conflict { paths: Vec<String> },
+    #[error("ALREADY_EXISTS")]
+    AlreadyExists,
+    #[error("OLD_STRING_OCCURRENCES: {0}; expected exactly 1")]
+    Occurrences(usize),
+    #[error("INVALID_PATCH")]
+    Patch,
+    #[error("SESSION_OR_LEASE_INVALID")]
+    Session,
+    #[error("GENERATION_ACTIVE")]
+    GenerationActive,
+    #[error("GIT_IDENTITY_REQUIRED")]
+    GitIdentity,
+    #[error("GIT_URL_OR_BRANCH_REJECTED")]
+    GitTarget,
 }
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {

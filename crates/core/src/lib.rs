@@ -7,7 +7,7 @@ pub mod guard;
 pub mod instructions;
 pub mod ports;
 pub mod prompts;
-pub use agent::{Agent, GenerationInput, GenerationResult};
+pub use agent::{Agent, GenerationInput, GenerationResult, SessionActionGuard};
 pub use myagent_protocol::Mode;
 pub use ports::*;
 pub use tokio_util::sync::CancellationToken;

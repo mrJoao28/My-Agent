@@ -154,6 +154,81 @@ fn update_message(db: &Connection, message: &Message, now: i64) -> Result<()> {
 }
 
 impl Store {
+    pub(crate) fn check_local_session(
+        &self,
+        workspace: &Workspace,
+        session: &str,
+        idle: bool,
+    ) -> Result<()> {
+        let workspace = workspace.clone();
+        let session = Self::checked_session_id(session)?;
+        self.call(move |state| {
+            let now = state.now()?;
+            let tx = state
+                .connection
+                .transaction_with_behavior(TransactionBehavior::Immediate)?;
+            require_scope(&tx, &workspace, &session)?;
+            require_lease(&tx, &session, &state.owner, now, &state.lost)?;
+            if idle {
+                no_generation(&tx, &session)?;
+            }
+            tx.commit()?;
+            Ok(())
+        })
+    }
+    pub fn append_undo_note(
+        &self,
+        workspace: &Workspace,
+        session: &str,
+        note: &str,
+    ) -> Result<Message> {
+        validate_user_content(note)?;
+        if !note.starts_with("[UNDO]") {
+            return Err(ValidationError::Field("undo note").into());
+        }
+        let workspace = workspace.clone();
+        let session = Self::checked_session_id(session)?;
+        let note = note.to_owned();
+        self.call(move |state| {
+            let now = state.now()?;
+            let tx = state
+                .connection
+                .transaction_with_behavior(TransactionBehavior::Immediate)?;
+            require_scope(&tx, &workspace, &session)?;
+            require_lease(&tx, &session, &state.owner, now, &state.lost)?;
+            no_generation(&tx, &session)?;
+            let (model, mode) = tx
+                .query_row(
+                    "SELECT model, mode FROM messages WHERE session_id=?1 ORDER BY rowid DESC LIMIT 1",
+                    [&session],
+                    |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+                )
+                .optional()?
+                .unwrap_or_else(|| ("local".into(), "BUILD".into()));
+            let mode = match mode.as_str() {
+                "PLAN" => Mode::Plan,
+                "BUILD" => Mode::Build,
+                _ => return Err(ValidationError::Field("mode").into()),
+            };
+            let message = Message {
+                id: identifier(&tx)?,
+                session_id: session,
+                generation_id: None,
+                role: Role::User,
+                status: MessageStatus::Complete,
+                model,
+                mode,
+                content: note,
+                parts: vec![],
+                duration: None,
+                total_tokens: None,
+                created_at: now,
+            };
+            write_message(&tx, &message)?;
+            tx.commit()?;
+            Ok(message)
+        })
+    }
     /// Cria sessão, contexto e lease na mesma transação.
     pub fn create_session(&self, workspace: &Workspace) -> Result<Session> {
         let workspace = workspace.clone();

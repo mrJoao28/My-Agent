@@ -335,3 +335,22 @@ loopback e fixtures; APIs pagas e credenciais reais não são usadas.
 Detalhes, justificativas de dependências e limites estão em
 [Gerações M2](../generations.md). A CLI/TUI, ferramentas concretas, Docker e
 plano ChatGPT permanecem nos seus milestones. Learn não foi implementado.
+
+## Adenda M4 — alterações e metadados nativos
+
+O crate tools concentra consentimento, planos de alteração e checkpoints.
+O core fornece eventos de aprovação e a exclusão entre geração e ações locais;
+StoreJournal verifica workspace/lease e persiste a nota local de desfazer.
+O store não depende de tools. A dependência inversa existe apenas nos testes
+de integração de tools, sem ciclo no grafo de crates.
+
+Um nono crate, platform, isola a consulta de ChangeTime no Windows. A API
+estável do toolchain não expõe esse metadado; usar o tempo de criação
+enfraqueceria a detecção de conflitos. A única chamada unsafe tem invariantes
+e necessidade documentadas em [Alterações M4](../mutations.md).
+Os demais crates mantêm forbid(unsafe_code). Em Unix, platform usa std segura.
+
+O parser de patches unified é próprio: permite aplicar um passo multiarquivo
+sem depender da existência de Git, valida tudo antes de escrever e não altera
+o índice. Efeitos parciais de I/O conservam os checkpoints para diagnóstico
+e desfazer; não se promete atomicidade entre arquivos distintos.

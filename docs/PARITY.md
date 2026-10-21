@@ -51,26 +51,26 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | GEN-02 | Ciclo da geração | Uma geração ativa por sessão; lock antes de awaits; diferenciar erro, conclusão e interrupção; persistir parciais, propagar cancelamento e aguardar cleanup no encerramento. Falha no SSE terminal não duplica gravação. | `S/services/chat-service.ts`, `S/services/stream-service.ts`, `S/index.ts` | em andamento | `S/services/chat-recovery.test.ts`, `S/services/stream-service.test.ts`, `S/launcher.test.ts` |
 | GEN-03 | Limites de tools | Orçamento padrão 40 chamadas, configurável até 200, verificado antes do executor; aviso perto do limite; timeout global de 5 min. Argumentos equivalentes são canonizados; resultado visível evita repetição; repetição persistente interrompe. | `S/services/tool-service.ts`, `S/services/stream-service.ts` | feito | `S/services/tool-service.test.ts`, `S/services/tool-guard.test.ts`, `S/services/stream-service.test.ts` |
 | GEN-04 | Evidência no contexto | Releituras voltam a ser permitidas quando evidência é removida/abreviada; edição invalida leitura anterior; nota de undo invalida evidências sem ampliar permissões ou orçamento. | `S/services/tool-service.ts`, `S/services/session-context.ts` | feito | `S/services/tool-guard.test.ts`, `S/services/stream-service.test.ts`, `S/services/session-context.test.ts` |
-| TASK-01 | Tarefas | `todo_write` mantém itens e status em memória, separados por sessão, com limpeza; não é plano de execução durável nem coordenação de múltiplos agentes. | `S/tools/todo-write.ts`, `S/services/session-lifecycle.ts` | pendente | `S/tools/files.test.ts`, `S/services/session-lifecycle.test.ts` |
+| TASK-01 | Tarefas | `todo_write` mantém itens e status em memória, separados por sessão, com limpeza; não é plano de execução durável nem coordenação de múltiplos agentes. | `S/tools/todo-write.ts`, `S/services/session-lifecycle.ts` | em andamento | `S/tools/files.test.ts`, `S/services/session-lifecycle.test.ts` |
 
 ## Ferramentas de arquivos, inspeção e processos
 
 | ID | Área | Funcionalidade confirmada no código | Onde está no legado | Status | Testes legados correspondentes |
 | --- | --- | --- | --- | --- | --- |
-| READ-01 | Leitura | `read_file`: até 5 MiB, páginas de linhas inteiras, offset zero-based, numeração opcional, saída até 10 mil caracteres, nextOffset/continuation; erro LINE_TOO_LONG sem saltar o meio da página. | `S/tools/read-file.ts` | pendente | `S/tools/files.test.ts`, `S/tools/file-editing.test.ts`, `S/tools/io-cancellation.test.ts`, `S/services/session-context.test.ts` |
-| READ-02 | Leitura em lote | `read_files`: 1–8 arquivos, até 1 MiB cada/4 MiB no lote/30 mil caracteres, seleção de linhas e sucesso parcial; recusa binários e caminhos protegidos. | `S/tools/read-files.ts` | pendente | `S/tools/inspection.test.ts` |
-| READ-03 | Diretórios | `list_directory`: paginação, limites e cancelamento; omissão de entradas sensíveis e links; continuidade pressupõe diretório inalterado. | `S/tools/list-directory.ts` | pendente | `S/tools/files.test.ts`, `S/tools/io-cancellation.test.ts` |
-| FIND-01 | Glob | `glob`: padrões relativos, zero/múltiplos níveis e exclusões seguras; usa regras do .gitignore da raiz, inclusive em buscas por subpasta. | `S/tools/glob.ts`, `S/lib/search-ignore.ts` | pendente | `S/tools/files.test.ts`, `S/tools/search-filters.test.ts` |
-| FIND-02 | Grep | `grep`: literal/regex, include, contexto de 0–20 linhas, files_only; limites de bytes/resultados/saída/tempo; regex em worker cancelável. | `S/tools/grep.ts`, `S/lib/grep-worker.ts`, `S/lib/search-ignore.ts` | pendente | `S/tools/grep.test.ts`, `S/tools/search-filters.test.ts`, `S/tools/files.test.ts` |
-| FIND-03 | Ignores | Leitura limitada do .gitignore raiz, negações e poda de pais excluídos; não consulta ignores aninhados/globais nem índice Git. Negação não libera segredos, links ou dependências fixamente excluídas. | `S/lib/search-ignore.ts` | pendente | `S/tools/search-filters.test.ts` |
-| INSPECT-01 | Projeto | `project_inspect`: manifests, scripts/dependências, configs e testes por inspeção estática com limites; não executa arquivos de configuração. | `S/tools/project-inspect.ts`, `S/lib/project-inspection.ts` | pendente | `S/tools/inspection.test.ts` |
-| INSPECT-02 | Código | `file_outline`: declarações e linhas JS/TS/JSX/TSX por AST em worker. `symbol_search`: busca literal de declarações; não equivale a referências nem resolução de tipos. | `S/tools/file-outline.ts`, `S/tools/symbol-search.ts`, `S/lib/source-analysis.ts`, `S/lib/source-worker.ts` | pendente | `S/tools/inspection.test.ts` |
-| INSPECT-03 | Ambiente | `environment_check`: diagnóstico passivo sem processos ou valores de ambiente; não comprova daemon/imagem/ferramentas da sandbox. | `S/tools/environment-check.ts` | pendente | `S/tools/inspection.test.ts` |
+| READ-01 | Leitura | `read_file`: até 5 MiB, páginas de linhas inteiras, offset zero-based, numeração opcional, saída até 10 mil caracteres, nextOffset/continuation; erro LINE_TOO_LONG sem saltar o meio da página. | `S/tools/read-file.ts` | feito | `S/tools/files.test.ts`, `S/tools/file-editing.test.ts`, `S/tools/io-cancellation.test.ts`, `S/services/session-context.test.ts` |
+| READ-02 | Leitura em lote | `read_files`: 1–8 arquivos, até 1 MiB cada/4 MiB no lote/30 mil caracteres, seleção de linhas e sucesso parcial; recusa binários e caminhos protegidos. | `S/tools/read-files.ts` | feito | `S/tools/inspection.test.ts` |
+| READ-03 | Diretórios | `list_directory`: paginação, limites e cancelamento; omissão de entradas sensíveis e links; continuidade pressupõe diretório inalterado. | `S/tools/list-directory.ts` | feito | `S/tools/files.test.ts`, `S/tools/io-cancellation.test.ts` |
+| FIND-01 | Glob | `glob`: padrões relativos, zero/múltiplos níveis e exclusões seguras; usa regras do .gitignore da raiz, inclusive em buscas por subpasta. | `S/tools/glob.ts`, `S/lib/search-ignore.ts` | feito | `S/tools/files.test.ts`, `S/tools/search-filters.test.ts` |
+| FIND-02 | Grep | `grep`: literal/regex, include, contexto de 0–20 linhas, files_only; limites de bytes/resultados/saída/tempo; regex em worker cancelável. | `S/tools/grep.ts`, `S/lib/grep-worker.ts`, `S/lib/search-ignore.ts` | feito | `S/tools/grep.test.ts`, `S/tools/search-filters.test.ts`, `S/tools/files.test.ts` |
+| FIND-03 | Ignores | Leitura limitada do .gitignore raiz, negações e poda de pais excluídos; não consulta ignores aninhados/globais nem índice Git. Negação não libera segredos, links ou dependências fixamente excluídas. | `S/lib/search-ignore.ts` | feito | `S/tools/search-filters.test.ts` |
+| INSPECT-01 | Projeto | `project_inspect`: manifests, scripts/dependências, configs e testes por inspeção estática com limites; não executa arquivos de configuração. | `S/tools/project-inspect.ts`, `S/lib/project-inspection.ts` | feito | `S/tools/inspection.test.ts` |
+| INSPECT-02 | Código | `file_outline`: declarações e linhas JS/TS/JSX/TSX por AST em worker. `symbol_search`: busca literal de declarações; não equivale a referências nem resolução de tipos. | `S/tools/file-outline.ts`, `S/tools/symbol-search.ts`, `S/lib/source-analysis.ts`, `S/lib/source-worker.ts` | feito | `S/tools/inspection.test.ts` |
+| INSPECT-03 | Ambiente | `environment_check`: diagnóstico passivo sem processos ou valores de ambiente; não comprova daemon/imagem/ferramentas da sandbox. | `S/tools/environment-check.ts` | feito | `S/tools/inspection.test.ts` |
 | WRITE-01 | Criação | `write_file`: escrita atômica, criação de pais, proteção contra sobrescrita e backup; modo existente preservado, novos arquivos 0644 em POSIX. | `S/tools/write-file.ts` | pendente | `S/tools/files.test.ts`, `S/tools/file-editing.test.ts` |
 | WRITE-02 | Edição | `edit_file`: substituição única, contagem de ocorrências ambíguas/ausentes; compara LF/CRLF e usa EOL dominante no trecho inserido, preservando bytes restantes e modo. | `S/tools/edit-file.ts` | pendente | `S/tools/files.test.ts`, `S/tools/file-editing.test.ts` |
 | WRITE-03 | Árvores | `move_file` e `delete_file`: mover/excluir com validação de descendentes, destino existente e raiz protegida. Exclusão sempre exige aprovação individual. | `S/tools/move-file.ts`, `S/tools/delete-file.ts`, `S/utils/path.ts` | pendente | `S/tools/files.test.ts`, `S/security/checkpoints.test.ts` |
 | WRITE-04 | Patch | `apply_patch`: diff unificado, checkOnly e validação de todos os caminhos antes de alterar; recusa binários, links, rename/copy e caminhos com espaços. | `S/tools/apply-patch.ts` | pendente | `S/tools/git.test.ts`, `S/security/checkpoints.test.ts` |
-| TEST-01 | Descoberta | `test_discover`: convenções JS/TS, Python e Go, scripts e indícios de runners, com inspeção limitada; não enumera casos gerados em runtime. | `S/tools/test-discover.ts`, `S/lib/project-inspection.ts` | pendente | `S/tools/inspection.test.ts` |
+| TEST-01 | Descoberta | `test_discover`: convenções JS/TS, Python e Go, scripts e indícios de runners, com inspeção limitada; não enumera casos gerados em runtime. | `S/tools/test-discover.ts`, `S/lib/project-inspection.ts` | feito | `S/tools/inspection.test.ts` |
 | TEST-02 | Execução | `test_run`: Bun, Node, Vitest, Jest e Pytest, runners fixos com argumentos escapados; cópia descartável em /tmp, dependências referenciadas somente leitura; timeout/cancelamento/saída limitada; não infere quantidade de testes pelo exit code. | `S/tools/test-run.ts` | pendente | `S/tools/test-tools.test.ts`, `S/security/sandbox.integration.test.ts` |
 | TEST-03 | Tipos | `type_check`: diagnóstico TypeScript, caminhos Windows e linha/coluna; tsc local antes do global, somente na sandbox; disponível também em PLAN com Docker. | `S/tools/type-check.ts` | pendente | `S/services/message-format.test.ts`, `S/security/permissions.test.ts`, `S/security/docker-availability.test.ts` |
 | SHELL-01 | Shell | `bash`: exclusivo de BUILD e Docker; timeout/saída/cancelamento; projeto somente leitura no container e saídas descartáveis em /tmp. Não há fallback de execução no host. | `S/tools/bash.ts`, `S/security/sandbox.ts` | pendente | `S/security/permissions.test.ts`, `S/security/sandbox.test.ts`, `S/security/sandbox.integration.test.ts` |
@@ -79,11 +79,11 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 
 | ID | Área | Funcionalidade confirmada no código | Onde está no legado | Status | Testes legados correspondentes |
 | --- | --- | --- | --- | --- | --- |
-| GIT-01 | Inspeção | `git_status`, `git_diff`, `git_log`, `git_show`, `git_blame`, `diff_summary`: escopo seguro, staged separado, histórico e atribuição de linhas; não expor caminhos protegidos. | `S/tools/git-status.ts`, `S/tools/git-diff.ts`, `S/tools/git-log.ts`, `S/tools/git-show.ts`, `S/tools/git-blame.ts`, `S/tools/diff-summary.ts`, `S/lib/git-inspection.ts` | pendente | `S/tools/git.test.ts`, `S/tools/git-inspection.test.ts`, `S/utils/git-scope.test.ts` |
+| GIT-01 | Inspeção | `git_status`, `git_diff`, `git_log`, `git_show`, `git_blame`, `diff_summary`: escopo seguro, staged separado, histórico e atribuição de linhas; não expor caminhos protegidos. | `S/tools/git-status.ts`, `S/tools/git-diff.ts`, `S/tools/git-log.ts`, `S/tools/git-show.ts`, `S/tools/git-blame.ts`, `S/tools/diff-summary.ts`, `S/lib/git-inspection.ts` | feito | `S/tools/git.test.ts`, `S/tools/git-inspection.test.ts`, `S/utils/git-scope.test.ts` |
 | GIT-02 | Commit | `git_commit`: arquivos explícitos, prévia para aprovação individual e preservação de staged fora do escopo; identidade Git existente, sem inventar configuração local. | `S/tools/git-commit.ts`, `S/utils/git.ts` | pendente | `S/tools/git.test.ts`, `S/tools/git-workflow.test.ts`, `S/security/approval-scope.test.ts` |
 | GIT-03 | Bootstrap/branches | `git_init` em main apenas fora de repositórios, `git_switch` cria/troca sem descarte/force, `git_remote_add` HTTPS validado sem substituir URL existente. | `S/tools/git-workflow.ts` | pendente | `S/tools/git-workflow.test.ts` |
 | GIT-04 | Push/sincronização | `git_push` só da branch atual, URL/branch vinculadas à aprovação, sem force/delete/tags; main/master pedem confirmação adicional Y e M. Após push, parar até liberação do usuário. `git_sync` usa fetch sem tags e merge ff-only da principal, com workspace/index limpos. | `S/tools/git-workflow.ts`, `S/security/tool-policy.ts`, `S/services/stream-service.ts`, `C/components/approval-panel.tsx` | pendente | `S/tools/git-workflow.test.ts`, `S/services/stream-service.test.ts`, `C/components/approval-panel.test.tsx` |
-| GIT-05 | Isolamento Git | Worktree explícita, ambiente reduzido; hooks/filtros/assinatura/pager/fsmonitor/diffs externos desativados; recusa metadata externa, links e alternates. Escritas Git serializadas. | `S/utils/git.ts`, `S/security/tool-policy.ts` | pendente | `S/utils/git-scope.test.ts`, `S/tools/git.test.ts`, `S/tools/git-inspection.test.ts`, `S/tools/git-workflow.test.ts` |
+| GIT-05 | Isolamento Git | Worktree explícita, ambiente reduzido; hooks/filtros/assinatura/pager/fsmonitor/diffs externos desativados; recusa metadata externa, links e alternates. Escritas Git serializadas. | `S/utils/git.ts`, `S/security/tool-policy.ts` | em andamento | `S/utils/git-scope.test.ts`, `S/tools/git.test.ts`, `S/tools/git-inspection.test.ts`, `S/tools/git-workflow.test.ts` |
 | UNDO-01 | Checkpoints | Checkpoint privado global por sessão antes de mutações de arquivos em BUILD; preserva bytes, EOL e modos; limites por arquivo/passo/store; inclui undo após falhas parciais. Não é commit Git nem snapshot de todo efeito externo. | `S/security/checkpoints.ts`, `S/security/tool-policy.ts` | pendente | `S/security/checkpoints.test.ts` |
 | UNDO-02 | /undo | Desfaz último passo sem sobrescrever alterações posteriores; recusa conflito/geração ativa, valida workspace/lease, persiste nota para invalidar evidência anterior. Não cria commits. | `S/services/chat-service.ts`, `C/hooks/use-chat.ts`, `C/components/command-menu/commands.tsx` | pendente | `S/security/checkpoints.test.ts`, `S/services/chat-recovery.test.ts`, `C/components/approval-undo.test.tsx` |
 | BOX-01 | Disponibilidade | Docker opcional para abrir o app; sem daemon não registrar bash/type_check/test_run. Verificação limitada, imagem padrão Bun, preparação/pull sob demanda e progresso, depois pull=never. | `S/security/sandbox.ts`, `S/index.ts`, `S/tools/index.ts`, `M/doctor.ts` | pendente | `S/security/docker-availability.test.ts`, `S/security/sandbox.test.ts`, `S/launcher.test.ts` |
@@ -151,7 +151,7 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 
 | ID | Área | Funcionalidade confirmada no código | Onde está no legado | Status | Testes legados correspondentes |
 | --- | --- | --- | --- | --- | --- |
-| SAFE-01 | Caminhos | Confinamento ao workspace; traversal, volumes/UNC, ADS, dispositivos Windows, pontos/espaços finais, ancestrais inexistentes, links/junctions e hard links recusados; raiz e descendentes protegidos. Não garante ausência de corrida contra outro processo local malicioso. | `S/utils/path.ts`, `S/security/workspaces.ts` | pendente | `S/utils/path.test.ts`, `S/utils/workspace.test.ts`, `S/tools/files.test.ts`, `S/tools/inspection.test.ts` |
+| SAFE-01 | Caminhos | Confinamento ao workspace; traversal, volumes/UNC, ADS, dispositivos Windows, pontos/espaços finais, ancestrais inexistentes, links/junctions e hard links recusados; raiz e descendentes protegidos. Não garante ausência de corrida contra outro processo local malicioso. | `S/utils/path.ts`, `S/security/workspaces.ts` | feito | `S/utils/path.test.ts`, `S/utils/workspace.test.ts`, `S/tools/files.test.ts`, `S/tools/inspection.test.ts` |
 | SAFE-02 | I/O limitado | Limites durante leitura, UTF-8 preservado entre chunks, cancelamento de body/processos/workers, deadline e liberação de timers/listeners/locks. | `S/lib/tool-io.ts`, `S/lib/bounded-json.ts`, `S/security/sandbox.ts`, `S/lib/source-analysis.ts` | pendente | `S/lib/tool-io.test.ts`, `S/tools/io-cancellation.test.ts`, `S/tools/inspection.test.ts`, `S/tools/web.test.ts`, `S/security/sandbox.test.ts` |
 | SAFE-03 | Privacidade | Não expor valores de credenciais em erros/diagnóstico/resultados; escrita privada/atômica das configurações; arquivos sensíveis recusados nas ferramentas, busca, Git e snapshots. | `S/lib/private-config.ts`, `S/lib/logger.ts`, `S/utils/path.ts`, `S/security/auth.ts`, `S/security/snapshot.ts` | pendente | `S/lib/private-config.test.ts`, `S/security/auth.test.ts`, `S/security/snapshot.test.ts`, `S/tools/files.test.ts`, `S/tools/git.test.ts` |
 | EVAL-01 | Tarefas | Nove fixtures verificáveis: leitura, corrigir operador, função com teste, refatorar CRLF, script executável, busca em 240 módulos, AGENTS.md, leitura de 300 linhas e 30 leituras sucessivas. Inventário completo e diff esperado, sem executar código gerado no host. | `E/tasks.ts` | pendente | `E/runner.test.ts` |
@@ -668,3 +668,120 @@ O git add foi recusado por falta de permissão para criar .git/index.lock.
 O staged permanece vazio; o usuário precisará prepará-lo no seu terminal
 e a revisão do staged continua obrigatória antes do commit. Nenhum commit,
 push ou PR do M2 foi executado.
+
+## M3 — Base de ferramentas e inspeção local
+
+Implementação no branch feat/m3-tools, baseada no M2 a142da4.
+O branch e o download das dependências foram feitos pelo usuário depois dos
+bloqueios de escrita em .git e acesso à rede deste ambiente.
+Nenhum commit, push ou PR do M3 foi executado.
+
+Referências lidas: tools/index.ts e implementações das 17 ferramentas pedidas;
+security/workspaces.ts, utils/path.ts e git.ts; project-inspection, search-ignore,
+source-analysis/source-worker, grep-worker, tool-io e git-inspection.
+Foram conferidos os testes de caminhos, leitura/edição, busca/ignore,
+inspeção, cancelamento e Git, além de FERRAMENTAS_DIAGNOSTICO.md e EDICAO_E_BUSCA.md.
+Código do legado prevaleceu para os limites numéricos.
+
+| Entrega M3 | Código | Evidência |
+| --- | --- | --- |
+| Contratos e registry | core/ports.rs, core/agent.rs; tools/registry.rs | ToolLimits e erros explícitos; schema compartilhado por publicação/validação; 17 ferramentas nos dois modos; modo desconhecido negado. PLAN não recebe mutação do projeto. |
+| Caminhos seguros | tools/path.rs | traversal, ancestrais ausentes, limites de raízes confiáveis, nomes sensíveis, volumes, prefixos canônicos, caixa ASCII Windows, hard links e junctions; symlinks Unix por cfg. |
+| read_file/read_files/list_directory | tools/files.rs e io.rs | páginas Unicode/CRLF sem gaps, arquivo vazio, linha longa, limites de arquivo/lote/página, falhas individuais e exclusão de hard links. |
+| glob/grep/ignores | tools/search.rs e io.rs | glob literal, ignore raiz/negações/poda por pai inclusive acesso direto, contexto/include/files_only, regex inválida/patológica, cancelamento ativo e tetos de 500/200 resultados e 20 MB. |
+| file_outline/symbol_search | tools/source.rs | AST JS/TS/JSX/TSX e variantes, declarações em vez de comentários/referências, tipos/membros, limites 200/100/256 KiB/2 MiB e cancelamento ativo. |
+| project_inspect/environment_check/test_discover | tools/inspect.rs e registry.rs | comandos de manifests não executados/não retornados; diagnóstico passivo, runners e convenções, categorias e truncamento explícito. |
+| Git de inspeção e diff_summary | tools/git.rs | fixtures Git reais: branch/status, working tree/staged distintos, log/show, blame histórico e limites de linhas; preservação do index. Includes/alternates e ignoreRevsFile bloqueados, filtros/textconv/diff externo desativados. |
+| todo_write | tools/registry.rs | substituição integral, contagens, IDs opacos, isolamento e clear_session; nenhum arquivo ou banco alterado. |
+
+Contratos, descrições, todos os limites e justificativas das dependências:
+[Ferramentas M3](tools.md). O registry pode ser passado ao Agent pela interface
+Tool existente; a conversa da CLI/TUI permanece posterior.
+todo_write está pronto como ferramenta; a conexão automática de sua limpeza
+ao encerramento da aplicação continua dependente do lifecycle futuro.
+O isolamento de Git de leitura está pronto; serialização de escritas Git
+continua pendente com as ferramentas de alteração.
+
+### Diferenças deliberadas
+
+- Regex usa o matcher Rust sem backtracking exponencial; backreferences e
+  lookaround de JavaScript retornam INVALID_PATTERN. AST usa tree-sitter em
+  vez de TypeScript; equivalência de recuperação de sintaxe inválida não é prometida.
+- As bordas gerais têm 128 KiB de entrada e 256 KiB de saída; os limites
+  específicos do legado são mantidos. Há profundidade defensiva de 256 na busca.
+- environment_check descreve My-Agent/OS/arquitetura, substituindo Bun/Node.
+- git_status usa paths seguros e scanner de untracked limitado, com ignore
+  apenas da raiz. Não enumera diretórios privados. Config Git com includes é
+  recusada antes da execução; configuração de até 256 KiB.
+- Revalidação de caminhos/handles não elimina corrida contra processo local
+  malicioso que troque ancestrais simultaneamente. I/O bloqueado pelo sistema
+  operacional não pode ser cancelado instantaneamente por std::fs.
+
+### Validação local final
+
+Rust 1.99.1/MSVC no Windows; CARGO_HOME=.cargo-cache e
+CARGO_TARGET_DIR=target/m3-validation. Lockfile atualizado em modo offline.
+Os três gates passaram:
+
+- cargo fmt --check.
+- cargo clippy --locked --workspace --all-targets --offline -- -D warnings.
+- cargo test --locked --workspace --offline: **101 aprovados, zero falhas e zero ignorados**.
+
+Distribuição: CLI 3, core 9, protocol 5, providers 16, sandbox 4, store 4,
+gerações 20, persistência 12, instruções de arquivos 3 e ferramentas M3 25.
+Nenhuma alteração de implementação ocorreu depois dessa suíte final.
+
+A primeira suíte encontrou quatro falhas reais nos testes novos: semântica
+de chaves literais em gitignore e prefixo canônico Windows nos argumentos Git.
+Foram corrigidas e os cenários passaram na suíte final. Uma consulta auxiliar
+de metadata sem CARGO_HOME apontou falta de cache; foi repetida com o cache
+correto. Falhas de rede do fetch e de permissão do branch são de ambiente,
+distintas das correções de código.
+
+Cargo metadata confirmou licenças MIT/Apache-2.0 ou alternativa MIT nas
+19 dependências transitivas/diretas adicionadas. Nenhuma expansão de deny.toml
+foi necessária. cargo-deny não foi executado.
+Não foram executados os testes Bun nem chamadas a modelos pagos, Docker ou web.
+
+O CI existente executa os gates em Windows/Linux/macOS; não houve execução
+remota do M3. Windows validou junctions/hard links e volumes; testes de
+symlinks Unix aguardam o CI. Não foi criado symlink de arquivo Windows que
+exija privilégios adicionais; reparse points foram exercitados por junctions.
+
+Web, shell, test_run/type_check ficam para o M5, conforme o pedido.
+Escrita/patch/checkpoints/aprovações e integração CLI/TUI continuam nos
+milestones próprios. Nenhuma ferramenta desse escopo futuro foi registrada.
+
+Commit proposto: `feat: add safe read-only tools and registry`.
+
+Arquivos para revisão/commit:
+
+- `Cargo.lock`
+- `README.md`
+- `crates/core/src/agent.rs`
+- `crates/core/src/ports.rs`
+- `crates/tools/Cargo.toml`
+- `crates/tools/src/files.rs`
+- `crates/tools/src/git.rs`
+- `crates/tools/src/inspect.rs`
+- `crates/tools/src/io.rs`
+- `crates/tools/src/lib.rs`
+- `crates/tools/src/path.rs`
+- `crates/tools/src/registry.rs`
+- `crates/tools/src/search.rs`
+- `crates/tools/src/source.rs`
+- `crates/tools/tests/read_only.rs`
+- `docs/PARITY.md`
+- `docs/tools.md`
+
+### Preparação do commit M3
+
+Revisados os 17 arquivos listados para nomes proibidos, padrões comuns
+de credenciais, UTF-8/LF, TOML e whitespace, sem ocorrências. Essa busca
+não garante detectar todo segredo possível. O grafo dos oito crates
+permanece sem ciclos. A conferência final de cargo fmt --check passou.
+
+O git add foi recusado por falta de permissão para criar .git/index.lock.
+O staged está vazio nesta preparação; o usuário deve prepará-lo no seu
+terminal, e seus blobs precisam de revisão antes de qualquer commit.
+Nenhum commit, push ou PR deste milestone foi executado.

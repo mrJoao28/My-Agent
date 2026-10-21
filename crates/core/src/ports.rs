@@ -39,6 +39,8 @@ pub enum AgentError {
     Replay,
     #[error("tool execution failed")]
     Tool,
+    #[error("tool failed: {0}")]
+    ToolFailure(String),
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -67,6 +69,8 @@ impl ModelMessage {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Effect {
     Read,
+    /// Estado volátil da sessão; não altera arquivos do projeto.
+    SessionState,
     Network,
     IsolatedProcess,
     Write,
@@ -91,6 +95,9 @@ pub struct ToolContext {
 }
 pub trait Tool: Send + Sync {
     fn spec(&self) -> ToolSpec;
+    fn limits(&self) -> ToolLimits {
+        ToolLimits::default()
+    }
     /// Deve validar schema e obter aprovação antes de qualquer I/O de projeto.
     fn authorize<'a>(
         &'a self,
@@ -103,6 +110,19 @@ pub trait Tool: Send + Sync {
         args: Map<String, Value>,
         context: ToolContext,
     ) -> BoxFuture<'a, Result<String>>;
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ToolLimits {
+    pub input_bytes: usize,
+    pub output_bytes: usize,
+}
+impl Default for ToolLimits {
+    fn default() -> Self {
+        Self {
+            input_bytes: 131_072,
+            output_bytes: 262_144,
+        }
+    }
 }
 #[derive(Clone, Debug)]
 pub struct ProviderRequest {

@@ -20,4 +20,5 @@ pub mod approval;
 pub mod dialog;
 pub mod ports;
 pub mod preview;
+pub mod render;
 pub mod transcript;

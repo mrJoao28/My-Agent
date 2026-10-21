@@ -1057,3 +1057,8 @@ modais, comandos locais, retomada explícita e foco. Aprovações têm escopo,
 prévia limitada, Y/A/N e confirmação M para main; Enter/Tab não aprovam.
 Prévias parciais decodificam escapes Unicode sem inferir efeito aplicado;
 painéis de cada arquivo preservam estados diferentes. /undo é ação local.
+
+Etapa 4: renderização Grafite com seletor no cabeçalho sem Tab duplicado,
+caixa de entrada com indicador lateral, painéis de código por arquivo e uma
+única barra cumulativa de 10M. TestBackend/insta cobrem home, nova sessão,
+sessão, aprovação e diálogo; tamanhos reduzidos e NO_COLOR são verificados.

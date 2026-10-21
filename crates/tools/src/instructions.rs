@@ -20,7 +20,7 @@ fn check(path: &Path) -> Result<()> {
             use std::os::windows::fs::MetadataExt;
             linked || metadata.file_attributes() & 0x400 != 0
         };
-        if linked {
+        if linked && !myagent_platform::is_system_directory_alias(ancestor) {
             return Err(AgentError::Configuration);
         }
     }
@@ -37,6 +37,11 @@ impl FilesystemInstructions {
     }
 }
 impl InstructionSource for FilesystemInstructions {
+    fn normalize_path(&self, path: &str) -> Option<String> {
+        let workspace = crate::SafeWorkspace::new(&self.root).ok()?;
+        let safe = workspace.resolve_safe_path(path, false).ok()?;
+        workspace.relative(&safe).ok()
+    }
     fn read(&self, relative: &Path) -> Result<Option<String>> {
         if relative.is_absolute()
             || relative.file_name().and_then(|s| s.to_str()) != Some("AGENTS.md")

@@ -295,6 +295,11 @@ struct ExecutionTool {
     registry: ExecutionRegistry,
 }
 impl Tool for ExecutionTool {
+    fn cleanup_timeout(&self) -> Duration {
+        // Docker removal has a 10s bound; leave time for CLI shutdown and
+        // snapshot disposal before the core finishes the generation.
+        Duration::from_secs(15)
+    }
     fn spec(&self) -> ToolSpec {
         let (description, parameters) = schema(self.name);
         ToolSpec {

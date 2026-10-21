@@ -83,6 +83,25 @@ fn models_file_is_explicit_bounded_and_invalid_json_is_preserved() {
     std::fs::write(&file, b"[]").unwrap();
     assert_eq!(ModelRegistry::load(&file).unwrap().models().len(), 13);
 }
+
+#[cfg(unix)]
+#[test]
+fn model_paths_reject_user_symlinks_and_hardlinks() {
+    let root = tempfile::tempdir().unwrap();
+    let real = root.path().join("real");
+    std::fs::create_dir(&real).unwrap();
+    let file = real.join("models.json");
+    std::fs::write(&file, b"[]").unwrap();
+    let alias = root.path().join("alias");
+    std::os::unix::fs::symlink(&real, &alias).unwrap();
+    assert!(ModelRegistry::load(&alias.join("models.json")).is_err());
+    let linked_file = root.path().join("models.json");
+    std::os::unix::fs::symlink(&file, &linked_file).unwrap();
+    assert!(ModelRegistry::load(&linked_file).is_err());
+    std::fs::remove_file(&linked_file).unwrap();
+    std::fs::hard_link(&file, &linked_file).unwrap();
+    assert!(ModelRegistry::load(&linked_file).is_err());
+}
 #[test]
 fn sse_fragments_utf8_crlf_comments_and_multiline_data() {
     let bytes =

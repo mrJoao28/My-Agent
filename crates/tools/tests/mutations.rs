@@ -21,6 +21,225 @@ use std::{
     },
 };
 use tokio::sync::mpsc;
+
+struct ScriptedProvider {
+    steps: Mutex<std::collections::VecDeque<Vec<ProviderEvent>>>,
+    requests: Mutex<Vec<ProviderRequest>>,
+    observed_path: PathBuf,
+    observed_contents: Mutex<Vec<String>>,
+}
+impl ScriptedProvider {
+    fn new(path: PathBuf, steps: Vec<Vec<ProviderEvent>>) -> Arc<Self> {
+        Arc::new(Self {
+            steps: Mutex::new(steps.into()),
+            requests: Mutex::new(vec![]),
+            observed_path: path,
+            observed_contents: Mutex::new(vec![]),
+        })
+    }
+}
+impl Provider for ScriptedProvider {
+    fn stream(
+        &self,
+        request: ProviderRequest,
+        _: CancellationToken,
+        events: mpsc::Sender<ProviderEvent>,
+    ) -> BoxFuture<'_, myagent_core::Result<()>> {
+        Box::pin(async move {
+            self.observed_contents
+                .lock()
+                .unwrap()
+                .push(fs::read_to_string(&self.observed_path).unwrap());
+            self.requests.lock().unwrap().push(request);
+            let step = self
+                .steps
+                .lock()
+                .unwrap()
+                .pop_front()
+                .expect("unexpected inference");
+            for event in step {
+                events
+                    .send(event)
+                    .await
+                    .map_err(|_| myagent_core::AgentError::Cancelled)?;
+            }
+            Ok(())
+        })
+    }
+}
+fn scripted_call(id: &str, name: &str, args: Value) -> ProviderEvent {
+    ProviderEvent::ToolCall(ToolCall {
+        id: id.into(),
+        name: name.into(),
+        args: args.as_object().unwrap().clone(),
+    })
+}
+async fn run_scripted(f: &Fixture, agent: &Agent) {
+    let (tx, mut rx) = mpsc::channel(64);
+    let manager = f.manager.clone();
+    let session = f.session.clone();
+    let events = f.events.clone();
+    let observer = tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            if let StreamEvent::ApprovalRequired { approval_id, .. } = &event {
+                assert!(manager.decide(&session, approval_id, ApprovalDecision::Once));
+            }
+            events.lock().unwrap().push(event);
+        }
+    });
+    agent
+        .generate(
+            GenerationInput {
+                session_id: f.session.clone(),
+                model: "fixture".into(),
+                mode: Mode::Build,
+                content: Some("perform the fixture action".into()),
+                resume: false,
+                context_window: 65536,
+                context_estimated: false,
+                max_tool_calls: 40,
+                cancellation: CancellationToken::new(),
+            },
+            tx,
+        )
+        .await
+        .unwrap();
+    observer.await.unwrap();
+}
+
+#[tokio::test]
+async fn nested_instructions_defer_the_entire_batch_before_approval_or_writes() {
+    for path_kind in ["relative", "absolute", "backslash"] {
+        let f = Fixture::new();
+        f.write(
+            "src/AGENTS.md",
+            "Scoped fixture rule: review before editing.",
+        );
+        f.write("src/file.rs", "before\n");
+        f.write("root.txt", "root fixture\n");
+        let path = match path_kind {
+            "absolute" => f.root.join("src/file.rs").to_string_lossy().into_owned(),
+            "backslash" => "src\\file.rs".into(),
+            _ => "src/file.rs".into(),
+        };
+        let edit = json!({"path":path,"old_str":"before","new_str":"after"});
+        let provider = ScriptedProvider::new(
+            f.root.join("src/file.rs"),
+            vec![
+                vec![
+                    scripted_call("read_deferred", "read_file", json!({"path":"root.txt"})),
+                    scripted_call("edit_deferred", "edit_file", edit.clone()),
+                    ProviderEvent::Done,
+                ],
+                vec![
+                    scripted_call("edit_reviewed", "edit_file", edit),
+                    ProviderEvent::Done,
+                ],
+                vec![ProviderEvent::Text("done".into()), ProviderEvent::Done],
+            ],
+        );
+        let registry = ToolRegistry::new(SafeWorkspace::new(&f.root).unwrap(), false)
+            .with_mutations(f.engine.clone());
+        let source = Arc::new(myagent_tools::FilesystemInstructions::new(&f.root).unwrap());
+        let agent = Agent::new(
+            provider.clone(),
+            f.journal(),
+            registry.tools(Mode::Build),
+            Some(source),
+        )
+        .unwrap();
+        run_scripted(&f, &agent).await;
+        assert_eq!(
+            *provider.observed_contents.lock().unwrap(),
+            vec!["before\n", "before\n", "after\n"]
+        );
+        let requests = provider.requests.lock().unwrap();
+        assert!(requests[1].messages.iter().flat_map(|m| &m.content).any(|part| {
+        matches!(part, myagent_protocol::MessagePart::ToolResult { result, .. } if result.contains("Scoped fixture rule"))
+    }));
+        let events = f.events.lock().unwrap();
+        assert_eq!(
+            events
+                .iter()
+                .filter(|event| matches!(event, StreamEvent::ApprovalRequired { .. }))
+                .count(),
+            1
+        );
+        let rows = f
+            .store
+            .list_messages(&f.workspace, &f.session, 100, 0)
+            .unwrap();
+        let parts = &rows.last().unwrap().parts;
+        for id in ["read_deferred", "edit_deferred"] {
+            assert!(parts.iter().any(|part| matches!(part, myagent_protocol::MessagePart::ToolCall { id: call, execution: Some(myagent_protocol::ExecutionState::Pending), .. } if call == id)));
+        }
+        assert_eq!(f.steps().len(), 1);
+    }
+}
+
+#[tokio::test]
+async fn persisted_local_undo_allows_the_same_read_in_the_next_generation() {
+    let f = Fixture::new();
+    f.write("file.rs", "before\n");
+    f.run(
+        "edit_file",
+        json!({"path":"file.rs","old_str":"before","new_str":"after"}),
+    )
+    .await
+    .unwrap();
+    let read = json!({"path":"file.rs","numbered":false});
+    let provider = ScriptedProvider::new(
+        f.root.join("file.rs"),
+        vec![
+            vec![
+                scripted_call("first_read", "read_file", read.clone()),
+                ProviderEvent::Done,
+            ],
+            vec![
+                ProviderEvent::Text("first complete".into()),
+                ProviderEvent::Done,
+            ],
+            vec![
+                scripted_call("second_read", "read_file", read),
+                ProviderEvent::Done,
+            ],
+            vec![
+                ProviderEvent::Text("second complete".into()),
+                ProviderEvent::Done,
+            ],
+        ],
+    );
+    let registry = ToolRegistry::new(SafeWorkspace::new(&f.root).unwrap(), false);
+    let agent = Agent::new(
+        provider.clone(),
+        f.journal(),
+        registry.tools(Mode::Build),
+        None,
+    )
+    .unwrap();
+    run_scripted(&f, &agent).await;
+    f.undo().await.unwrap();
+    // The next generation reconstructs history from SQLite, including USER/[UNDO].
+    run_scripted(&f, &agent).await;
+    let rows = f
+        .store
+        .list_messages(&f.workspace, &f.session, 100, 0)
+        .unwrap();
+    let result = rows
+        .last()
+        .unwrap()
+        .parts
+        .iter()
+        .find_map(|part| match part {
+            myagent_protocol::MessagePart::ToolResult { id, result, .. } if id == "second_read" => {
+                Some(result)
+            }
+            _ => None,
+        })
+        .unwrap();
+    assert!(result.contains("before"), "{result}");
+    assert!(!result.contains("after"));
+}
 #[derive(Default)]
 struct FakePush {
     requests: Mutex<Vec<(String, String, String)>>,

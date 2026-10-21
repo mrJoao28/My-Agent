@@ -2,6 +2,20 @@
 use myagent_core::instructions::{InstructionSource, ProjectInstructions};
 use myagent_tools::FilesystemInstructions;
 use std::{fs, sync::Arc};
+
+#[test]
+fn system_temporary_instruction_root_is_accepted_without_following_user_aliases() {
+    let temp = tempfile::tempdir().unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "temporary fixture rules").unwrap();
+    let source = FilesystemInstructions::new(temp.path()).unwrap();
+    assert_eq!(
+        source
+            .read(std::path::Path::new("AGENTS.md"))
+            .unwrap()
+            .as_deref(),
+        Some("temporary fixture rules")
+    );
+}
 #[test]
 fn file_source_is_read_only_scoped_and_never_reads_prohibited_names() {
     let root = tempfile::Builder::new()

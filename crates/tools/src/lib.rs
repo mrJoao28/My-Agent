@@ -148,6 +148,8 @@ impl From<Error> for myagent_core::AgentError {
     fn from(e: Error) -> Self {
         if matches!(e, Error::Cancelled) {
             Self::Cancelled
+        } else if matches!(e, Error::Sandbox(myagent_sandbox::SandboxError::Cleanup)) {
+            Self::Cleanup
         } else {
             Self::ToolFailure(e.to_string())
         }

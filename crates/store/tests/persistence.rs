@@ -16,6 +16,24 @@ use std::{
 use tempfile::TempDir;
 
 struct TestClock(AtomicI64);
+
+#[test]
+fn system_temporary_paths_work_without_canonicalizing_the_fixture() {
+    let root = tempfile::tempdir().unwrap();
+    let workspace = Workspace::resolve(root.path()).unwrap();
+    let store = Store::open(StoreConfig {
+        home: root.path().join("state"),
+        retention_days: 0,
+    })
+    .unwrap();
+    let session = store.create_session(&workspace).unwrap();
+    assert!(
+        store
+            .load_session(&workspace, &session.id)
+            .unwrap()
+            .is_some()
+    );
+}
 impl TestClock {
     fn set(&self, value: i64) {
         self.0.store(value, Ordering::SeqCst);

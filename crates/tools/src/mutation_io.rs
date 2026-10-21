@@ -94,7 +94,8 @@ pub(crate) fn private_directory(path: &Path) -> Result<PathBuf> {
                 Err(e) => return Err(e.into()),
             }
             let m = fs::symlink_metadata(&cursor)?;
-            if !m.is_dir() || linked(&m) {
+            if (!m.is_dir() || linked(&m)) && !myagent_platform::is_system_directory_alias(&cursor)
+            {
                 return Err(Error::PathBlocked);
             }
         }

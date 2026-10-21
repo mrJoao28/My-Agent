@@ -338,6 +338,30 @@ async fn synthesis_removes_all_tools_when_two_calls_remain() {
             .any(|e| matches!(e, StreamEvent::ToolLimitWarning { limit: 3 }))
     );
 }
+
+#[tokio::test]
+async fn compact_plan_keeps_verification_tools_without_exposing_bash_or_writes() {
+    let f = Fixture::new();
+    let provider = Simulated::new(vec![complete("plan")]);
+    let tools = vec![
+        FakeTool::new("test_run", Effect::IsolatedProcess) as Arc<dyn Tool>,
+        FakeTool::new("type_check", Effect::IsolatedProcess),
+        FakeTool::new("bash", Effect::IsolatedProcess),
+        FakeTool::new("write_file", Effect::Write),
+    ];
+    let agent = Agent::new(provider.clone(), f.journal(), tools, None).unwrap();
+    let mut input = f.input();
+    input.mode = Mode::Plan;
+    input.context_window = 16384;
+    run(&agent, input).await.0.unwrap();
+    let requests = provider.requests.lock().unwrap();
+    let names: Vec<_> = requests[0]
+        .tools
+        .iter()
+        .map(|tool| tool.name.as_str())
+        .collect();
+    assert_eq!(names, vec!["test_run", "type_check"]);
+}
 #[tokio::test]
 async fn identical_calls_are_not_reexecuted_and_fourth_repeat_interrupts() {
     let f = Fixture::new();

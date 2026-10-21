@@ -1,8 +1,14 @@
 # Segurança
 
-O My-Agent está em desenvolvimento; nenhum runtime do assistente foi portado
-neste bootstrap. Os requisitos abaixo orientam os próximos milestones e não
-representam controles já implementados. O progresso está em [docs/PARITY.md](docs/PARITY.md).
+O My-Agent está em desenvolvimento. As bibliotecas implementam o núcleo de
+geração, persistência, ferramentas, aprovações, checkpoints e adapters Docker
+e web. A CLI ainda oferece apenas ajuda e versão; a interface de conversa
+permanece pendente. Controles implementados e limites de validação estão em
+[docs/PARITY.md](docs/PARITY.md).
+
+No macOS, somente os aliases de sistema `/var` → `/private/var` e
+`/tmp` → `/private/tmp`, com destinos exatos, são aceitos nas verificações
+de ancestrais. Links arbitrários, junctions e hard links continuam bloqueados.
 
 ## Relato de vulnerabilidades
 

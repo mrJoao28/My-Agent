@@ -179,6 +179,8 @@ impl Agent {
                     "git_diff",
                     "git_commit",
                     "bash",
+                    "test_run",
+                    "type_check",
                 ];
                 (allowed
                     && (input.context_window >= 32768 || essential.contains(&spec.name.as_str())))
@@ -247,11 +249,12 @@ impl Agent {
                     }
                 }
             }
+            Ok(())
         });
         tasks
             .lock()
             .map_err(|_| AgentError::Persistence)?
-            .push(monitor);
+            .push(TrackedTask::new(monitor, Duration::from_secs(2)));
 
         let result = tokio::select! {biased;
             _=token.cancelled()=>Err(if lease_lost.load(Ordering::Acquire){AgentError::LeaseLost}else{AgentError::Cancelled}),
@@ -259,7 +262,10 @@ impl Agent {
             result=self.run(&input,&state,&events,&mut guard,&mut usage,RunContext{root,system,tools,limit,output,instructions,tasks:tasks.clone()})=>result,
         };
         token.cancel();
-        settle_tasks(tasks).await?;
+        let result = match settle_tasks(tasks).await {
+            Ok(()) => result,
+            Err(error) => Err(error),
+        };
         let duration = u32::try_from(start.elapsed().as_secs()).unwrap_or(u32::MAX);
         let journal = self.journal.clone();
         let id = state.message.id.clone();
@@ -405,12 +411,13 @@ impl Agent {
             let (finished_tx, finished_rx) = tokio::sync::oneshot::channel();
             let task = tokio::spawn(async move {
                 let result = provider.stream(request, cancel, sender).await;
-                let _ = finished_tx.send(result);
+                let _ = finished_tx.send(result.clone());
+                result
             });
             plan.tasks
                 .lock()
                 .map_err(|_| AgentError::Persistence)?
-                .push(task);
+                .push(TrackedTask::new(task, Duration::from_secs(2)));
             let mut calls = Vec::new();
             let mut parts = Vec::new();
             let mut metadata = None;
@@ -536,6 +543,31 @@ impl Agent {
             {
                 return Err(AgentError::Protocol);
             }
+            // A batch is proposed before any of its results reach the model.
+            // Discover all scopes first: even a read followed by an edit in the
+            // same batch must not apply new instructions after the edit.
+            let mut instruction_update = if calls.iter().any(|call| {
+                self.tools.get(&call.name).is_some_and(|tool| {
+                    tool.spec().effect == Effect::Write || mutating_name(&call.name)
+                })
+            }) && let Some(snapshot) = &plan.instructions
+            {
+                let snapshot = snapshot.clone();
+                let paths = calls
+                    .iter()
+                    .flat_map(|call| instructions::tool_paths(&call.name, &call.args))
+                    .collect::<Vec<_>>();
+                blocking(move || {
+                    snapshot
+                        .lock()
+                        .map_err(|_| AgentError::Configuration)?
+                        .for_paths(&paths)
+                })
+                .await?
+            } else {
+                String::new()
+            };
+            let defer_batch = !instruction_update.is_empty();
             for call in calls {
                 guard.register(&call.name, &call.args)?;
                 let tool = self.tools.get(&call.name).ok_or(AgentError::ToolDenied)?;
@@ -556,7 +588,12 @@ impl Agent {
                 let fingerprint = guard::key(&call.name, &call.args);
                 let replay = tool.spec().effect == Effect::Write || mutating_name(&call.name);
                 if replay && state.previous.iter().any(|p|matches!(p,MessagePart::ToolCall{name,args,execution,..} if name==&call.name && guard::key(name,args)==fingerprint && *execution!=Some(ExecutionState::Pending))) {return Err(AgentError::Replay);}
-                let result = if cached.contains_key(&fingerprint) {
+                let result = if defer_batch {
+                    format!(
+                        "Error: PROJECT_INSTRUCTIONS_UPDATED. No calls in this batch were executed or approved. Review the project instructions and propose the necessary calls again.\n{}",
+                        std::mem::take(&mut instruction_update)
+                    )
+                } else if cached.contains_key(&fingerprint) {
                     "Error: resultado já disponível no contexto; não repita esta chamada."
                         .to_owned()
                 } else {
@@ -586,16 +623,23 @@ impl Agent {
                     let (result_tx, result_rx) = tokio::sync::oneshot::channel();
                     let task = tokio::spawn(async move {
                         let result = executing.execute(args, context).await;
+                        let cleanup_failed = result == Err(AgentError::Cleanup);
                         let _ = result_tx.send(result);
+                        if cleanup_failed {
+                            Err(AgentError::Cleanup)
+                        } else {
+                            Ok(())
+                        }
                     });
                     plan.tasks
                         .lock()
                         .map_err(|_| AgentError::Persistence)?
-                        .push(task);
+                        .push(TrackedTask::new(task, tool.cleanup_timeout()));
                     let result = result_rx.await.map_err(|_| AgentError::Tool)?;
                     let mut output = match result {
                         Ok(value) => value,
                         Err(AgentError::Cancelled) => return Err(AgentError::Cancelled),
+                        Err(AgentError::Cleanup) => return Err(AgentError::Cleanup),
                         Err(AgentError::ToolFailure(code)) => format!("Tool failed: {code}"),
                         Err(_) => "Tool failed: execution failed".into(),
                     };
@@ -698,7 +742,7 @@ impl Agent {
     }
 }
 struct RunContext {
-    tasks: Arc<Mutex<Vec<JoinHandle<()>>>>,
+    tasks: Arc<Mutex<Vec<TrackedTask>>>,
     root: String,
     system: String,
     tools: Vec<ToolSpec>,
@@ -714,17 +758,41 @@ async fn emit(
     tokio::select! {biased;_=cancel.cancelled()=>Err(AgentError::Cancelled),result=events.send(event)=>result.map_err(|_|AgentError::Cancelled)}
 }
 
-async fn settle_tasks(pool: Arc<Mutex<Vec<JoinHandle<()>>>>) -> Result<()> {
+struct TrackedTask {
+    handle: JoinHandle<Result<()>>,
+    cleanup_timeout: Duration,
+}
+impl TrackedTask {
+    fn new(handle: JoinHandle<Result<()>>, cleanup_timeout: Duration) -> Self {
+        Self {
+            handle,
+            cleanup_timeout,
+        }
+    }
+}
+async fn settle_tasks(pool: Arc<Mutex<Vec<TrackedTask>>>) -> Result<()> {
     let tasks = {
         let mut tasks = pool.lock().map_err(|_| AgentError::Persistence)?;
         std::mem::take(&mut *tasks)
     };
-    let deadline = Instant::now() + Duration::from_secs(2);
+    let started = Instant::now();
+    let mut failed = false;
     for mut task in tasks {
-        if tokio::time::timeout_at(deadline, &mut task).await.is_err() {
-            task.abort();
-            let _ = task.await;
+        match tokio::time::timeout_at(started + task.cleanup_timeout, &mut task.handle).await {
+            Ok(Ok(Ok(()))) => {}
+            Ok(Ok(Err(AgentError::Cleanup))) => failed = true,
+            Ok(Ok(Err(_))) => {}
+            Ok(Err(_)) => failed = true,
+            Err(_) => {
+                failed = true;
+                task.handle.abort();
+                let _ = task.handle.await;
+            }
         }
     }
-    Ok(())
+    if failed {
+        Err(AgentError::Cleanup)
+    } else {
+        Ok(())
+    }
 }

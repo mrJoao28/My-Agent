@@ -61,7 +61,9 @@ YYYY-MM-DD, hint válido do provider e fallback estimado: 16.384 tokens local,
 | Ollama | Chat Completions SSE; reasoning/reasoning_content, texto, chamadas fragmentadas, usage e marcador DONE com finish_reason válido. |
 
 Leitura limitada durante o recebimento: 1 MiB por linha/payload SSE,
-16 MiB por resposta HTTP e 64 KiB de argumentos por chamada. O parser monta
+16 MiB por resposta HTTP e 64 KiB de argumentos por chamada. Esse último
+é o limite efetivo via modelo, embora a API local de mutações aceite até
+8 MiB; alterações grandes devem ser divididas em chamadas direcionadas. O parser monta
 UTF-8 a partir dos bytes, suporta LF/CRLF/CR, BOM, comentários e data multilinha.
 Chamada incompleta ou argumentos finais inconsistentes falham antes de efeitos.
 Status HTTP, content-type, JSON, contagens e conclusão são conferidos.
@@ -103,7 +105,9 @@ orçamento é recusado antes de executar seus efeitos.
 Canonização ignora ordem de chaves de objetos, preservando arrays. Até
 três propostas idênticas são admitidas; resultado completo ainda presente
 no snapshot evita reexecutar a mesma ferramenta. Escrita, abreviação,
-remoção do contexto e notas de undo invalidam evidências pertinentes.
+remoção do contexto e notas de undo invalidam evidências pertinentes. Notas
+locais de undo são mensagens USER e invalidam o cache antes do filtro de
+chamadas ASSISTANT, inclusive no histórico reconstruído do SQLite.
 O orçamento e as contagens de repetição são preservados na retomada.
 
 Retomar requer pedido explícito do chamador, modelo/modo compatíveis e USER
@@ -117,9 +121,12 @@ A execução tem deadline global de cinco minutos. Um monitor independente
 verifica o lease a cada cinco segundos, inclusive durante ferramentas longas,
 e cancela a geração se a propriedade for perdida. Cancelamento usa árvore de
 tokens, chega ao HTTP e ao contexto de execução das ferramentas, e também é
-acionado quando o consumidor abandona a geração. Tarefas têm prazo de
-cleanup de dois segundos antes de abort; interrupção é persistida depois
-desse cleanup. O supervisor de processo adota um Child já autorizado,
+acionado quando o consumidor abandona a geração. O cleanup respeita o prazo declarado por cada ferramenta: dois segundos
+por padrão, quinze para execução Docker e 310 para alterações com captura
+durável do estado posterior (até 300 segundos). Os prazos partem do mesmo
+instante de encerramento, sem acumular um novo prazo por tarefa. Falha, panic
+ou timeout no cleanup produzem erro explícito e estado INTERRUPTED; uma falha
+de remoção Docker continua visível mesmo após cancelar a inferência. O supervisor de processo adota um Child já autorizado,
 limita stdout/stderr com orçamento compartilhado, mata e aguarda o processo.
 Ele não cria comandos, não é um executor no host e não implementa Docker;
 encerrar um futuro container inteiro cabe ao adapter Docker.
@@ -127,7 +134,8 @@ encerrar um futuro container inteiro cabe ao adapter Docker.
 ## Contexto, prompts e tokens
 
 Sistema, schemas e saída têm reservas explícitas. Janelas menores que
-32.768 usam apenas ferramentas essenciais. A 70% do orçamento, evidência
+32.768 usam ferramentas essenciais, incluindo test_run e type_check quando
+o adapter Docker estiver disponível. PLAN continua sem bash ou mutações. A 70% do orçamento, evidência
 antiga é resumida localmente, preservando o pedido atual e pares completos.
 Somente resultados confirmados atribuem alterações; falhas e efeitos
 desconhecidos viram pendências. Resultados abreviados são marcados;
@@ -150,9 +158,14 @@ Texto de prompt/arquivo/resultado jamais amplia essa lista.
 AGENTS.md tem snapshot por geração, raiz antes de subpastas, entrega única,
 até 128 candidatos/profundidade 32 e 16 KiB totais com envelopes/Unicode.
 A fonte de arquivos é somente leitura e recusa binários, caminhos sensíveis,
-symlinks, hard links e junctions. Instruções de subpastas são consultadas
-depois da autorização da ferramenta. Os adapters usam caminhos relativos
-normalizados ao workspace. A verificação de ancestrais não elimina uma
+symlinks, hard links e junctions. Antes de autorizar um lote que contém mutações, todos os seus caminhos são
+consultados. Se houver instruções novas, nenhuma chamada desse lote executa
+ou consome aprovação: resultados explícitos devolvem as regras ao modelo,
+que precisa propor novamente as chamadas. O orçamento de chamadas continua
+valendo; chamadas adiadas ficam pending com resultado de adiamento.
+A fonte normaliza caminhos absolutos, relativos e separadores Windows para
+escopos relativos ao workspace. Listas files de objetos e strings são
+aceitas; alvos de runners são relativos ao path selecionado. A verificação de ancestrais não elimina uma
 corrida com outro processo que possa trocar diretórios simultaneamente.
 
 ## Dependências e validação

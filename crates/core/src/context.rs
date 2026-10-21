@@ -227,13 +227,19 @@ pub fn evidence(
 ) -> std::collections::HashMap<String, String> {
     let mut available = std::collections::HashMap::new();
     for (index, message) in messages.iter().enumerate() {
+        // Local undo notes are persisted as user messages. Invalidate before
+        // filtering for assistant tool calls, including after reopening a session.
+        if message
+            .content
+            .iter()
+            .any(|part| matches!(part, MessagePart::Text { text } if text.starts_with("[UNDO] ")))
+        {
+            available.clear();
+        }
         if message.role != ModelRole::Assistant {
             continue;
         }
         for part in &message.content {
-            if matches!(part,MessagePart::Text{text} if text.starts_with("[UNDO] ")) {
-                available.clear();
-            }
             let MessagePart::ToolCall { id, name, args, .. } = part else {
                 continue;
             };

@@ -15,6 +15,8 @@ pub enum AgentError {
     Cancelled,
     #[error("generation deadline exceeded")]
     Timeout,
+    #[error("generation cleanup did not complete; inspect pending resources before retrying")]
+    Cleanup,
     #[error("invalid provider response")]
     Protocol,
     #[error("provider request failed")]
@@ -97,6 +99,10 @@ pub struct ToolContext {
 }
 pub trait Tool: Send + Sync {
     fn spec(&self) -> ToolSpec;
+    /// Bound for cancellation cleanup, including any owned inner worker.
+    fn cleanup_timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(2)
+    }
     fn ends_generation_on_success(&self) -> bool {
         false
     }

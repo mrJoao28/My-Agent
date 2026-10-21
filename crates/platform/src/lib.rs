@@ -2,6 +2,31 @@
 #![cfg_attr(not(windows), forbid(unsafe_code))]
 //! Consulta de metadados nativos. Justificativa e invariantes: docs/mutations.md.
 use std::{fs::File, io};
+
+/// macOS exposes these two system temporary roots through fixed aliases.
+/// No workspace-created symlink, junction or arbitrary target is trusted.
+pub fn is_system_directory_alias(path: &std::path::Path) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        let expected = match path.to_str() {
+            Some("/var") => "/private/var",
+            Some("/tmp") => "/private/tmp",
+            _ => return false,
+        };
+        std::fs::read_link(path).is_ok_and(|target| {
+            // Apple's root aliases may store a relative target (private/var).
+            // Resolve only against their fixed parent, without canonicalizing
+            // arbitrary user-controlled links into trusted paths.
+            std::path::Path::new("/").join(target) == std::path::Path::new(expected)
+        })
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = path;
+        false
+    }
+}
+
 #[cfg(unix)]
 pub fn change_time(file: &File) -> io::Result<i128> {
     use std::os::unix::fs::MetadataExt;
@@ -44,5 +69,36 @@ mod windows {
             return Err(io::Error::last_os_error());
         }
         Ok(i128::from(basic.ChangeTime) * 100)
+    }
+}
+
+#[cfg(test)]
+mod path_tests {
+    #[test]
+    fn arbitrary_paths_are_never_system_aliases() {
+        for path in [
+            "/project/var",
+            "/project/tmp",
+            "/var/project",
+            "/private/var",
+            "var",
+            "/",
+        ] {
+            assert!(!super::is_system_directory_alias(std::path::Path::new(
+                path
+            )));
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_temporary_roots_match_only_their_fixed_targets() {
+        for (path, target) in [("/var", "/private/var"), ("/tmp", "/private/tmp")] {
+            assert_eq!(
+                std::path::Path::new("/").join(std::fs::read_link(path).unwrap()),
+                std::path::Path::new(target)
+            );
+            assert!(super::is_system_directory_alias(std::path::Path::new(path)));
+        }
     }
 }

@@ -413,6 +413,10 @@ struct MutationTool {
     registry: MutationRegistry,
 }
 impl Tool for MutationTool {
+    fn cleanup_timeout(&self) -> Duration {
+        // After-images must be durable even when cancellation follows a write.
+        Duration::from_secs(310)
+    }
     fn spec(&self) -> ToolSpec {
         let (description, parameters) = schema(self.name);
         ToolSpec {

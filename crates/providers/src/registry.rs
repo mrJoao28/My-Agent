@@ -208,7 +208,7 @@ impl ModelRegistry {
                         use std::os::windows::fs::MetadataExt;
                         linked || metadata.file_attributes() & 0x400 != 0
                     };
-                    if linked {
+                    if linked && !myagent_platform::is_system_directory_alias(parent) {
                         return Err(AgentError::Configuration);
                     }
                 }

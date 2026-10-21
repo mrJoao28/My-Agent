@@ -743,6 +743,7 @@ name = "myagent-providers"
 version = "0.1.0"
 dependencies = [
  "myagent-core",
+ "myagent-platform",
  "myagent-protocol",
  "reqwest",
  "serde",
@@ -766,6 +767,7 @@ name = "myagent-store"
 version = "0.1.0"
 dependencies = [
  "myagent-core",
+ "myagent-platform",
  "myagent-protocol",
  "rusqlite",
  "serde",

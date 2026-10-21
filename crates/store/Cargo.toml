@@ -11,6 +11,7 @@ description = "SQLite local, sessões e persistência do My-Agent."
 [dependencies]
 myagent-core.workspace = true
 myagent-protocol.workspace = true
+myagent-platform.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true

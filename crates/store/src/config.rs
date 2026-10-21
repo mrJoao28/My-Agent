@@ -96,7 +96,7 @@ fn is_link(metadata: &fs::Metadata) -> bool {
 }
 
 fn check_file(path: &Path, metadata: &fs::Metadata) -> Result<()> {
-    if is_link(metadata) {
+    if is_link(metadata) && !myagent_platform::is_system_directory_alias(path) {
         return Err(Error::UnsafePath);
     }
     if metadata.is_file() {
@@ -125,7 +125,10 @@ pub(crate) fn check_path(path: &Path) -> Result<()> {
     for ancestor in path.ancestors() {
         match fs::symlink_metadata(ancestor) {
             Ok(metadata) => {
-                if ancestor != path && !metadata.is_dir() {
+                if ancestor != path
+                    && !metadata.is_dir()
+                    && !myagent_platform::is_system_directory_alias(ancestor)
+                {
                     return Err(Error::UnsafePath);
                 }
                 check_file(ancestor, &metadata)?;

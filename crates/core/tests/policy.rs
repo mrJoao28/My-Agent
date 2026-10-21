@@ -288,7 +288,7 @@ fn results_are_invalidated_by_writes_and_undo_notes() {
     assert_eq!(evidence.len(), 1);
     assert!(evidence.keys().all(|k| !k.starts_with("read_file:")));
     history.push(ModelMessage::text(
-        ModelRole::Assistant,
+        ModelRole::User,
         "[UNDO] previous edit undone",
     ));
     assert!(context::evidence(&history, &Default::default()).is_empty());
@@ -313,4 +313,30 @@ fn instruction_notes_have_a_total_budget_and_do_not_repeat_limit_warnings() {
     assert!(total <= MAX_INSTRUCTION_BYTES);
     assert_eq!(warnings, 1);
     assert!(source.reads.lock().unwrap().len() <= 128);
+}
+
+#[test]
+fn instruction_paths_accept_git_strings_and_runner_relative_targets() {
+    use myagent_core::instructions::tool_paths;
+    let args = |value| serde_json::from_value(value).unwrap();
+    assert_eq!(
+        tool_paths(
+            "git_commit",
+            &args(json!({"files":["src/a.rs","docs/b.md"]}))
+        ),
+        vec!["src/a.rs", "docs/b.md"]
+    );
+    assert_eq!(
+        tool_paths("read_files", &args(json!({"files":[{"path":"src/a.rs"}]}))),
+        vec!["src/a.rs"]
+    );
+    let paths = tool_paths(
+        "test_run",
+        &args(json!({"path":"service","files":["tests/unit.rs"]})),
+    );
+    assert!(
+        paths
+            .iter()
+            .any(|path| path.replace('\\', "/") == "service/tests/unit.rs")
+    );
 }

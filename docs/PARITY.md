@@ -997,3 +997,31 @@ Arquivos para revisão/commit:
 - `docs/PARITY.md`
 - `docs/adr/0001-arquitetura.md`
 - `docs/sandbox-web.md`
+
+## Correções de integração e macOS — 21/10/2026
+
+Correções autorizadas diretamente na main pelo usuário, sem mudanças na CLI/TUI.
+
+| Área | Correção | Evidência de regressão |
+| --- | --- | --- |
+| GEN-04 / UNDO | Notas locais USER/[UNDO] invalidam evidência antes do filtro ASSISTANT; próxima geração pode reler o arquivo restaurado. | policy.rs e mutations.rs: edição real, leitura, undo e nova geração com SQLite. |
+| Instruções por escopo | Lotes com mutações descobrem instruções antes de qualquer aprovação ou efeito. Regras novas adiam o lote inteiro e exigem nova proposta do modelo. | mutations.rs: leitura + edição no mesmo lote, uma única aprovação e um checkpoint; caminhos relativos, absolutos e separadores Windows. |
+| Caminhos | files aceita objetos de read_files e strings de git_commit/runners; alvos dos runners respeitam path. | policy.rs e fonte FilesystemInstructions. |
+| Cleanup | Prazo por ferramenta (2s padrão, 15s Docker, 310s mutações/checkpoints), com início comum. Falhas e timeouts não pulam a persistência terminal. Erro de remoção Docker sobrevive ao cancelamento. | isolated_execution.rs: Agent real com driver Docker simulado, limpeza de 3s, sucesso e falha; estado IN_PROGRESS até terminar a tentativa. |
+| Perfil compacto | test_run/type_check continuam disponíveis com Docker; PLAN continua sem bash ou mutações. | generations.rs: janela de 16384 e registro de ferramentas enviado ao provider. |
+| macOS | platform reconhece somente /var e /tmp com destinos fixos em /private (absolutos ou relativos à raiz). Providers, store, instruções e diretórios de checkpoints usam a mesma exceção restrita. | Fixture temporária não canonicalizada em providers/store/instruções; testes de links arbitrários e hard links; teste específico dos aliases no macOS. |
+
+Não foram adicionadas crates externas. Providers e store agora reutilizam
+myagent-platform; Cargo.lock registra somente essas duas arestas internas.
+O limite efetivo de argumentos via provider continua sendo 64 KiB; a API
+local de mutações pode aceitar entradas maiores. Isso está explícito em
+docs/generations.md; escritas grandes via modelo devem ser direcionadas/divididas.
+
+Validação local Linux com Rust 1.99.1: cargo fmt --all --check,
+cargo check --locked --workspace --all-targets,
+cargo clippy --locked --workspace --all-targets -- -D warnings e
+cargo test --locked --workspace. A suíte registrou 169 testes aprovados,
+nenhuma falha e um teste Docker real ignorado. Ajuda e versão também conferidas.
+Windows/macOS não foram executados nativamente nesta máquina; os resultados
+remotos devem ser conferidos no workflow CI do commit correspondente.
+Docker real e providers externos não foram executados.

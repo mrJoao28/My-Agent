@@ -22,6 +22,10 @@ struct Driver {
     timeout: bool,
     cleanup_fail: bool,
     wait: AtomicBool,
+    cleanup_delay: Duration,
+    run_started: tokio::sync::Notify,
+    cleanup_started: tokio::sync::Notify,
+    cleanup_finished: AtomicBool,
 }
 impl DockerDriver for Driver {
     fn invoke(
@@ -43,6 +47,9 @@ impl DockerDriver for Driver {
                 return Ok(output("", if self.missing_image { 1 } else { 0 }));
             }
             if args[0] == "rm" {
+                self.cleanup_started.notify_one();
+                tokio::time::sleep(self.cleanup_delay).await;
+                self.cleanup_finished.store(true, Ordering::SeqCst);
                 return if self.cleanup_fail {
                     Err(SandboxError::Docker)
                 } else {
@@ -50,6 +57,7 @@ impl DockerDriver for Driver {
                 };
             }
             if args[0] == "run" {
+                self.run_started.notify_one();
                 assert!(args.iter().any(|s| s == "--network=none"));
                 if self.wait.load(Ordering::SeqCst) {
                     cancel.cancelled().await;
@@ -62,6 +70,122 @@ impl DockerDriver for Driver {
             }
             Ok(output("", 0))
         })
+    }
+}
+
+#[tokio::test]
+async fn cancelling_agent_waits_for_docker_cleanup_and_persists_cleanup_failure() {
+    use myagent_core::{
+        Agent, AgentError, BoxFuture, GenerationInput, Provider, ProviderEvent, ProviderRequest,
+        ToolCall,
+    };
+    use myagent_protocol::{MessageStatus, StreamEvent};
+    use myagent_store::{Store, StoreConfig, StoreJournal, Workspace};
+    use tokio::sync::mpsc;
+    struct ShellProvider;
+    impl Provider for ShellProvider {
+        fn stream(
+            &self,
+            _: ProviderRequest,
+            _: CancellationToken,
+            events: mpsc::Sender<ProviderEvent>,
+        ) -> BoxFuture<'_, myagent_core::Result<()>> {
+            Box::pin(async move {
+                events
+                    .send(ProviderEvent::ToolCall(ToolCall {
+                        id: "shell_call".into(),
+                        name: "bash".into(),
+                        args: json!({"command":"fixture"}).as_object().unwrap().clone(),
+                    }))
+                    .await
+                    .map_err(|_| AgentError::Cancelled)?;
+                events
+                    .send(ProviderEvent::Done)
+                    .await
+                    .map_err(|_| AgentError::Cancelled)?;
+                Ok(())
+            })
+        }
+    }
+    for cleanup_fail in [false, true] {
+        let temp = tempfile::tempdir().unwrap();
+        let base = std::fs::canonicalize(temp.path()).unwrap();
+        let root = base.join("workspace");
+        std::fs::create_dir(&root).unwrap();
+        std::fs::write(root.join("fixture.rs"), "fixture").unwrap();
+        let workspace = Workspace::resolve(&root).unwrap();
+        let store = Store::open(StoreConfig {
+            home: base.join("state"),
+            retention_days: 0,
+        })
+        .unwrap();
+        let session = store.create_session(&workspace).unwrap().id;
+        let driver = Arc::new(Driver {
+            cleanup_fail,
+            cleanup_delay: Duration::from_secs(3),
+            ..Driver::default()
+        });
+        driver.wait.store(true, Ordering::SeqCst);
+        let registry = registry(&root, driver.clone()).await;
+        let agent = Agent::new(
+            Arc::new(ShellProvider),
+            Arc::new(StoreJournal::new(store.clone(), workspace.clone())),
+            registry.tools(Mode::Build),
+            None,
+        )
+        .unwrap();
+        let cancellation = CancellationToken::new();
+        let input = GenerationInput {
+            session_id: session.clone(),
+            model: "fixture".into(),
+            mode: Mode::Build,
+            content: Some("run fixture".into()),
+            resume: false,
+            context_window: 65536,
+            context_estimated: false,
+            max_tool_calls: 40,
+            cancellation: cancellation.clone(),
+        };
+        let (tx, mut rx) = mpsc::channel(32);
+        let task = tokio::spawn(async move { agent.generate(input, tx).await });
+        tokio::time::timeout(Duration::from_secs(5), driver.run_started.notified())
+            .await
+            .unwrap();
+        cancellation.cancel();
+        driver.cleanup_started.notified().await;
+        let rows = store.list_messages(&workspace, &session, 100, 0).unwrap();
+        assert_eq!(rows.last().unwrap().status, MessageStatus::InProgress);
+        let expected = if cleanup_fail {
+            AgentError::Cleanup
+        } else {
+            AgentError::Cancelled
+        };
+        assert_eq!(task.await.unwrap().unwrap_err(), expected);
+        assert!(driver.cleanup_finished.load(Ordering::SeqCst));
+        let rows = store.list_messages(&workspace, &session, 100, 0).unwrap();
+        assert_eq!(rows.last().unwrap().status, MessageStatus::Interrupted);
+        while let Some(event) = rx.recv().await {
+            assert!(!matches!(event, StreamEvent::Done { .. }));
+        }
+        // Cleanup failure deliberately retains its snapshot; remove the fixture
+        // only after the fake driver has confirmed it has stopped.
+        if cleanup_fail {
+            let calls = driver.calls.lock().unwrap();
+            let mount = calls
+                .iter()
+                .find(|args| args[0] == "run")
+                .unwrap()
+                .iter()
+                .find(|arg| arg.starts_with("type=bind,source="))
+                .unwrap();
+            let source = mount
+                .strip_prefix("type=bind,source=")
+                .unwrap()
+                .split(",target=")
+                .next()
+                .unwrap();
+            std::fs::remove_dir_all(source).unwrap();
+        }
     }
 }
 fn output(stdout: &str, exit_code: i32) -> DockerOutput {

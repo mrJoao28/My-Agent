@@ -76,7 +76,10 @@ A resposta apresenta até 20.000 unidades UTF-16 por stream; type_check até
 
 Cancelamento também alcança a CLI e a remoção forçada do container. Um worker
 mantém o snapshot vivo até terminar a limpeza, mesmo se o consumidor abandonar
-o futuro. A remoção tem limite de dez segundos. Falha de limpeza retorna erro e
+o futuro. A remoção tem limite de dez segundos. O core concede quinze segundos para
+encerrar o worker de execução, confirmar a remoção e liberar o snapshot;
+a geração permanece IN_PROGRESS durante essa limpeza. Falhas de limpeza
+interrompem a geração com erro explícito, inclusive durante cancelamento. Falha de limpeza retorna erro e
 conserva o temporário, em vez de remover um mount possivelmente ativo. Não se
 declara sucesso nesse caso. Não há aplicação de artefatos ao workspace.
 

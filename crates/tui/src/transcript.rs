@@ -1,5 +1,5 @@
 use crate::preview::{self, CodePanel, CodeStatus};
-use myagent_protocol::{Message, MessagePart, Role};
+use myagent_protocol::{Message, MessagePart, Mode, Role};
 use serde_json::{Map, Value};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Speaker {
@@ -25,6 +25,7 @@ pub enum Entry {
     Text {
         speaker: Speaker,
         text: String,
+        mode: Option<Mode>,
     },
     Code(CodePanel),
     Tool {
@@ -39,18 +40,27 @@ pub struct Transcript {
 }
 impl Transcript {
     pub fn text(&mut self, speaker: Speaker, text: &str, delta: bool) {
+        self.text_in_mode(speaker, text, delta, None);
+    }
+    pub fn text_in_mode(&mut self, speaker: Speaker, text: &str, delta: bool, mode: Option<Mode>) {
         let text = crate::safe_text(text);
         if delta
             && let Some(Entry::Text {
                 speaker: old,
                 text: prior,
+                mode: prior_mode,
             }) = self.entries.last_mut()
             && *old == speaker
+            && *prior_mode == mode
         {
             prior.push_str(&text);
             return;
         }
-        self.entries.push(Entry::Text { speaker, text });
+        self.entries.push(Entry::Text {
+            speaker,
+            text,
+            mode,
+        });
     }
     pub fn preview(&mut self, id: &str, name: &str, raw: &str, status: CodeStatus) {
         for panel in preview::panels(id, name, raw, status) {
@@ -115,6 +125,7 @@ impl Transcript {
                 transcript.text(Speaker::User, &message.content, false);
                 continue;
             }
+            let start = transcript.entries.len();
             if message.parts.is_empty() && !message.content.is_empty() {
                 transcript.text(
                     if message.role == Role::Error {
@@ -128,9 +139,11 @@ impl Transcript {
             }
             for part in &message.parts {
                 match part {
-                    MessagePart::Text { text } => transcript.text(Speaker::Assistant, text, true),
+                    MessagePart::Text { text } => {
+                        transcript.text_in_mode(Speaker::Assistant, text, false, Some(message.mode))
+                    }
                     MessagePart::Reasoning { text } => {
-                        transcript.text(Speaker::Reasoning, text, true)
+                        transcript.text_in_mode(Speaker::Reasoning, text, false, Some(message.mode))
                     }
                     MessagePart::ToolCall { id, name, args, .. } => transcript.call(id, name, args),
                     MessagePart::ToolResult { id, result, .. } => transcript.result(id, result),
@@ -142,6 +155,11 @@ impl Transcript {
                         &format!("Limite de {limit} chamadas"),
                         false,
                     ),
+                }
+            }
+            for entry in &mut transcript.entries[start..] {
+                if let Entry::Text { mode, .. } = entry {
+                    *mode = Some(message.mode);
                 }
             }
         }

@@ -58,3 +58,19 @@ fn preferences_refuse_arbitrary_links() {
     assert!(Preferences::load(&alias).is_err());
     assert!(Preferences::default().save(&alias).is_err());
 }
+
+#[test]
+fn cursor_and_visual_lines_share_exact_width_and_unicode_wrapping() {
+    let mut input = Input::default();
+    for (text, expected, position) in [
+        ("abcd", vec!["abcd", ""], (0, 1)),
+        ("abcd\nx", vec!["abcd", "x"], (1, 1)),
+        ("abcd\n\nx", vec!["abcd", "", "x"], (1, 2)),
+        ("abc🦀x", vec!["abc", "🦀x"], (3, 1)),
+    ] {
+        input.set(text);
+        let (lines, cursor) = input.visual(4);
+        assert_eq!(lines, expected);
+        assert_eq!(cursor, position);
+    }
+}

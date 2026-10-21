@@ -63,6 +63,7 @@ pub struct App {
     pub max_scroll: usize,
     pub follow: bool,
     pub menu_selected: usize,
+    pub commands_dismissed: bool,
     pub mentions: Vec<String>,
     pub mention_query: Option<String>,
     pub approval_area: Rect,
@@ -114,6 +115,7 @@ impl App {
             max_scroll: 0,
             follow: true,
             menu_selected: 0,
+            commands_dismissed: false,
             mentions: vec![],
             mention_query: None,
             approval_area: Rect::default(),
@@ -244,10 +246,12 @@ impl App {
                 self.status = "Gerando".into();
             }
             StreamEvent::TextDelta { text } => {
-                self.transcript.text(Speaker::Assistant, &text, true)
+                self.transcript
+                    .text_in_mode(Speaker::Assistant, &text, true, self.running_mode)
             }
             StreamEvent::ReasoningDelta { text } => {
-                self.transcript.text(Speaker::Reasoning, &text, true)
+                self.transcript
+                    .text_in_mode(Speaker::Reasoning, &text, true, self.running_mode)
             }
             StreamEvent::ToolPreview {
                 tool_call_id,
@@ -303,13 +307,19 @@ impl App {
             }
             StreamEvent::Error { message, .. } => {
                 self.approval = None;
-                self.transcript.text(Speaker::Error, &message, false);
+                self.transcript
+                    .text_in_mode(Speaker::Error, &message, false, self.running_mode);
                 self.status = "Interrompido".into();
             }
         }
     }
+    pub fn command_menu_open(&self) -> bool {
+        !self.commands_dismissed
+            && self.input.text().starts_with('/')
+            && !self.commands().is_empty()
+    }
     pub fn commands(&self) -> Vec<(&'static str, &'static str)> {
-        let q = self.input.text().trim();
+        let q = self.input.text();
         COMMANDS
             .iter()
             .copied()
@@ -470,6 +480,8 @@ impl App {
             Event::Paste(text)
                 if self.dialog.is_none() && self.approval.is_none() && !self.busy() =>
             {
+                self.commands_dismissed = false;
+                self.menu_selected = 0;
                 if !self.input.insert(&text) {
                     self.notify("Limite de 9000 caracteres atingido.", true);
                 }
@@ -498,7 +510,12 @@ impl App {
         }
     }
     fn key(&mut self, key: KeyEvent) -> Vec<Action> {
-        let control = key.modifiers.contains(KeyModifiers::CONTROL);
+        // Windows may report AltGr as Ctrl+Alt. Printable characters from that
+        // combination are text, never Ctrl shortcuts or approval decisions.
+        let altgr = key
+            .modifiers
+            .contains(KeyModifiers::CONTROL | KeyModifiers::ALT);
+        let control = key.modifiers.contains(KeyModifiers::CONTROL) && !altgr;
         let interrupt = key.code == KeyCode::Esc || (control && key.code == KeyCode::Char('c'));
         if let Some(dialog) = &mut self.dialog {
             if interrupt {
@@ -567,7 +584,7 @@ impl App {
                 KeyCode::PageDown => approval.scroll_by(12),
                 KeyCode::Home => approval.scroll = 0,
                 KeyCode::End => approval.scroll = approval.max_scroll,
-                KeyCode::Char(c) if !control => {
+                KeyCode::Char(c) if !control && !key.modifiers.contains(KeyModifiers::ALT) => {
                     if let Some(decision) = approval.decision(c) {
                         let id = approval.id.clone();
                         self.approval = None;
@@ -577,6 +594,10 @@ impl App {
                 }
                 _ => {}
             }
+            return vec![];
+        }
+        if key.code == KeyCode::Esc && self.command_menu_open() && !self.busy() {
+            self.commands_dismissed = true;
             return vec![];
         }
         if interrupt {
@@ -603,7 +624,7 @@ impl App {
                 self.mentions.clear();
                 return vec![];
             }
-            if self.input.text().starts_with('/') {
+            if self.command_menu_open() {
                 if let Some((name, _)) = self.commands().get(self.menu_selected).copied() {
                     self.input.set(name);
                 }
@@ -626,18 +647,15 @@ impl App {
             }
             return vec![];
         }
-        let menu = self.input.text().starts_with('/');
+        let menu = self.command_menu_open();
         match key.code {
             KeyCode::Enter if key.modifiers.contains(KeyModifiers::SHIFT) => {
                 self.input.insert("\n");
             }
             KeyCode::Enter => {
-                if menu {
-                    let command = self
-                        .commands()
-                        .get(self.menu_selected)
-                        .map(|(name, _)| name.to_string())
-                        .unwrap_or_else(|| self.input.text().trim().to_owned());
+                let exact = COMMANDS.iter().any(|(name, _)| *name == self.input.text());
+                if exact {
+                    let command = self.input.text().to_owned();
                     self.input.take();
                     self.menu_selected = 0;
                     return self.command(&command);
@@ -649,7 +667,12 @@ impl App {
             }
             KeyCode::Char('a') if control => self.input.home(),
             KeyCode::Char('e') if control => self.input.end(),
-            KeyCode::Char(c) if !control && !key.modifiers.contains(KeyModifiers::ALT) => {
+            KeyCode::Char(c)
+                if c == '/'
+                    || altgr
+                    || (!control && !key.modifiers.contains(KeyModifiers::ALT)) =>
+            {
+                self.commands_dismissed = false;
                 if !self.input.insert(&c.to_string()) {
                     self.notify("Limite de 9000 caracteres atingido.", true);
                 }

@@ -119,13 +119,49 @@ fn transcript(app: &App, width: u16, p: Palette) -> Vec<Line<'static>> {
     }
     for entry in &app.transcript.entries[start..] {
         match entry {
-            Entry::Text { speaker, text } => {
+            Entry::Text {
+                speaker,
+                text,
+                mode,
+            } => {
                 let color = match speaker {
                     Speaker::User => p.plan,
                     Speaker::Error => p.bad,
                     Speaker::Info | Speaker::Reasoning => p.muted,
                     _ => p.fg,
                 };
+                if matches!(speaker, Speaker::Assistant | Speaker::Error) {
+                    let edge = if *speaker == Speaker::Error {
+                        p.bad
+                    } else if *mode == Some(Mode::Plan) {
+                        p.plan
+                    } else {
+                        p.build
+                    };
+                    let label = mode.map(mode_name).unwrap_or("RESPOSTA");
+                    let title = format!("{} · {label}", speaker.label());
+                    let mut frame_palette = p;
+                    frame_palette.border = edge;
+                    lines.push(border(&title, "", width, frame_palette));
+                    let inner = width.saturating_sub(4);
+                    for part in wrap(text, inner) {
+                        let padding = inner.saturating_sub(part.width());
+                        lines.push(Line::from(vec![
+                            Span::styled("│ ", Style::default().fg(edge)),
+                            Span::styled(part, Style::default().fg(color)),
+                            Span::styled(
+                                format!("{} │", " ".repeat(padding)),
+                                Style::default().fg(edge),
+                            ),
+                        ]));
+                    }
+                    lines.push(Line::styled(
+                        format!("└{}┘", "─".repeat(width.saturating_sub(2))),
+                        Style::default().fg(edge),
+                    ));
+                    lines.push(Line::raw(""));
+                    continue;
+                }
                 lines.push(Line::styled(
                     speaker.label(),
                     Style::default().fg(color).add_modifier(Modifier::BOLD),
@@ -200,6 +236,85 @@ fn transcript(app: &App, width: u16, p: Palette) -> Vec<Line<'static>> {
     }
     lines
 }
+/// Display only; never use this label for workspace identity or authorization.
+pub fn workspace_name(path: &str) -> &str {
+    let trimmed = path.trim_end_matches(['/', '\\']);
+    if trimmed.is_empty() {
+        return if path.contains('/') { "/" } else { "\\" };
+    }
+    trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed)
+}
+fn approval_panel(frame: &mut Frame, app: &mut App, p: Palette) {
+    let area = frame.area();
+    let Some(approval) = &mut app.approval else {
+        return;
+    };
+    let w = area.width.saturating_sub(4).min(100);
+    let h = app
+        .chat_area
+        .height
+        .max(10)
+        .min(area.height.saturating_sub(4));
+    let rect = Rect::new(area.x + (area.width - w) / 2, app.chat_area.y, w, h);
+    app.approval_area = rect;
+    frame.render_widget(Clear, rect);
+    let block = Block::default()
+        .title(format!(" Aprovação · {} ", approval.tool))
+        .borders(Borders::ALL)
+        .style(p.base())
+        .border_style(Style::default().fg(p.build));
+    let inner = block.inner(rect);
+    frame.render_widget(block, rect);
+    let choices = if let Some(branch) = &approval.confirmation {
+        format!("M confirmar envio à {branch}   N negar")
+    } else if approval.allow_session {
+        "Y uma vez   A nesta sessão   N negar".into()
+    } else {
+        "Y uma vez   N negar".into()
+    };
+    let mut footer = wrap(&choices, usize::from(inner.width));
+    footer.extend(wrap(
+        "Enter/Tab não aprovam · Esc/Ctrl+C interrompem",
+        usize::from(inner.width),
+    ));
+    if approval.truncated {
+        footer.extend(wrap("Prévia limitada: 1000 linhas / 80 mil caracteres. Negue e peça uma ação menor para revisar tudo.", usize::from(inner.width)));
+    }
+    footer.extend(wrap(
+        "↑↓ PgUp/PgDn mouse · rolar prévia",
+        usize::from(inner.width),
+    ));
+    let rows = Layout::vertical([
+        Constraint::Min(1),
+        Constraint::Length(
+            footer
+                .len()
+                .min(usize::from(inner.height.saturating_sub(1))) as u16,
+        ),
+    ])
+    .split(inner);
+    let mut body = vec![];
+    for line in approval
+        .scope
+        .lines()
+        .chain(std::iter::once(""))
+        .chain(approval.lines.iter().map(String::as_str))
+    {
+        for part in wrap(line, usize::from(rows[0].width)) {
+            body.push(Line::from(syntax(&part, p)));
+        }
+    }
+    approval.max_scroll = body.len().saturating_sub(usize::from(rows[0].height));
+    approval.scroll = approval.scroll.min(approval.max_scroll);
+    frame.render_widget(
+        Paragraph::new(body).scroll((approval.scroll.min(u16::MAX as usize) as u16, 0)),
+        rows[0],
+    );
+    frame.render_widget(
+        Paragraph::new(footer.join("\n")).style(Style::default().fg(p.build)),
+        rows[1],
+    );
+}
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
     let p = app.theme.palette(app.no_color);
@@ -215,18 +330,12 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         );
         return;
     }
-    let input_width = usize::from(area.width.saturating_sub(4)).max(1);
-    let (_, cursor_row) = app.input.display_position(input_width);
-    let input_rows = wrap(app.input.text(), input_width)
-        .len()
-        .max(cursor_row + 1)
-        .clamp(2, 6) as u16;
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(2),
-            Constraint::Min(3),
-            Constraint::Length(input_rows + 2),
+            Constraint::Min(1),
+            Constraint::Length(5),
             Constraint::Length(2),
             Constraint::Length(1),
             Constraint::Length(1),
@@ -242,7 +351,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         Span::styled(
             format!(
                 "  │  {}  │  {}  │  ",
-                crate::safe_text(&app.workspace),
+                crate::safe_text(workspace_name(&app.workspace)),
                 crate::safe_text(&app.model)
             ),
             Style::default().fg(p.muted),
@@ -287,80 +396,36 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     );
     app.chat_area = layout[1];
     app.approval_area = Rect::default();
-    if let Some(approval) = &mut app.approval {
-        app.approval_area = layout[1];
-        let block = Block::default()
-            .title(format!(" Aprovação necessária · {} ", approval.tool))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(p.build));
-        let inner = block.inner(layout[1]);
-        frame.render_widget(block, layout[1]);
-        let rows = Layout::vertical([
-            Constraint::Length(1),
-            Constraint::Min(1),
-            Constraint::Length(3),
-        ])
-        .split(inner);
-        frame.render_widget(
-            Paragraph::new(approval.scope.clone()).style(Style::default().fg(p.muted)),
-            rows[0],
-        );
-        let mut body = vec![];
-        for line in &approval.lines {
-            for part in wrap(line, usize::from(rows[1].width)) {
-                body.push(Line::from(syntax(&part, p)));
-            }
-        }
-        approval.max_scroll = body.len().saturating_sub(usize::from(rows[1].height));
-        approval.scroll = approval.scroll.min(approval.max_scroll);
-        frame.render_widget(
-            Paragraph::new(body).scroll((approval.scroll.min(u16::MAX as usize) as u16, 0)),
-            rows[1],
-        );
-        let choices = if let Some(branch) = &approval.confirmation {
-            format!("M confirmar envio à {branch}   N negar")
-        } else if approval.allow_session {
-            "Y uma vez   A nesta sessão   N negar".into()
-        } else {
-            "Y uma vez   N negar".into()
-        };
-        let warning = if approval.truncated {
-            "Prévia limitada: 1000 linhas / 80 mil caracteres. "
-        } else {
-            ""
-        };
-        frame.render_widget(
-            Paragraph::new(vec![
-                Line::styled(choices, Style::default().fg(p.build)),
-                Line::styled(
-                    format!("{warning}Enter/Tab não aprovam."),
-                    Style::default().fg(p.muted),
-                ),
-                Line::styled(
-                    format!(
-                        "↑↓ PgUp/PgDn mouse · linha {}/{}",
-                        approval.scroll + 1,
-                        approval.max_scroll + 1
-                    ),
-                    Style::default().fg(p.muted),
-                ),
-            ]),
-            rows[2],
-        );
-    } else if app.transcript.entries.is_empty() {
+    if app.transcript.entries.is_empty() {
         let title = if app.screen == Screen::NewSession {
             "Nova sessão"
         } else {
             "O que vamos construir?"
         };
-        let text = format!(
-            "\n\nMy-Agent\n\n{title}\n\nDescreva a tarefa ou digite / para abrir os comandos."
+        let home = Rect::new(
+            layout[1].x,
+            layout[1].y + layout[1].height.saturating_sub(5) / 2,
+            layout[1].width,
+            layout[1].height.min(5),
         );
         frame.render_widget(
-            Paragraph::new(text)
-                .alignment(ratatui::layout::Alignment::Center)
-                .style(p.base()),
-            layout[1],
+            Paragraph::new(vec![
+                Line::styled(
+                    title,
+                    Style::default().fg(p.fg).add_modifier(Modifier::BOLD),
+                ),
+                Line::raw(""),
+                Line::styled(
+                    "PLAN para explorar · BUILD para implementar",
+                    Style::default().fg(p.muted),
+                ),
+                Line::styled(
+                    "Descreva a tarefa ou use / para comandos.",
+                    Style::default().fg(p.muted),
+                ),
+            ])
+            .alignment(ratatui::layout::Alignment::Center),
+            home,
         );
     } else {
         let lines = transcript(app, layout[1].width, p);
@@ -392,7 +457,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     );
     inner.x = inner.x.saturating_add(1);
     inner.width = inner.width.saturating_sub(1);
-    let (cursor_col, cursor_row) = app.input.display_position(usize::from(inner.width));
+    let (input_lines, (cursor_col, cursor_row)) = app.input.visual(usize::from(inner.width));
     let scroll = cursor_row.saturating_sub(usize::from(inner.height).saturating_sub(1));
     let text = if app.input.text().is_empty() {
         vec![Line::styled(
@@ -400,10 +465,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             Style::default().fg(p.muted),
         )]
     } else {
-        wrap(app.input.text(), usize::from(inner.width))
-            .into_iter()
-            .map(Line::raw)
-            .collect()
+        input_lines.into_iter().map(Line::raw).collect()
     };
     frame.render_widget(Paragraph::new(text).scroll((scroll as u16, 0)), inner);
     if app.dialog.is_none() && app.approval.is_none() && !app.busy() {
@@ -476,6 +538,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         .style(Style::default().fg(p.muted)),
         layout[5],
     );
+    approval_panel(frame, app, p);
     if let Some(dialog) = &app.dialog {
         let w = area.width.saturating_sub(8).min(88);
         let h = area.height.saturating_sub(6).min(19);
@@ -534,7 +597,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             rows[2],
         );
     } else if app.approval.is_none() && !app.busy() {
-        let items: Vec<String> = if app.input.text().starts_with('/') {
+        let items: Vec<String> = if app.command_menu_open() {
             app.commands()
                 .iter()
                 .enumerate()
@@ -549,7 +612,12 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             app.mentions.iter().map(|path| format!("@{path}")).collect()
         };
         if !items.is_empty() {
-            let h = (items.len() + 2).min(10) as u16;
+            let h = ((items.len() + 2).min(10) as u16).min(app.chat_area.height);
+            if h < 3 {
+                return;
+            }
+            let visible = usize::from(h - 2);
+            let start = app.menu_selected.saturating_sub(visible - 1);
             let rect = Rect::new(
                 layout[2].x,
                 layout[2].y.saturating_sub(h),
@@ -558,9 +626,20 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             );
             frame.render_widget(Clear, rect);
             frame.render_widget(
-                Paragraph::new(items.join("\n"))
-                    .block(Block::default().borders(Borders::ALL))
-                    .style(p.base()),
+                Paragraph::new(
+                    items
+                        .into_iter()
+                        .skip(start)
+                        .take(visible)
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                )
+                .block(
+                    Block::default()
+                        .title(" Tab completar · Esc fechar ")
+                        .borders(Borders::ALL),
+                )
+                .style(p.base()),
                 rect,
             );
         }

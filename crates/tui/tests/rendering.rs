@@ -11,7 +11,7 @@ use ratatui::{Terminal, backend::TestBackend};
 use serde_json::json;
 fn app() -> App {
     let mut app = App::new(
-        "my-agent / feat/m6-tui".into(),
+        r"C:\Users\fixture\My-Agent".into(),
         vec![],
         "Ollama · local".into(),
         Theme::Grafite,
@@ -40,10 +40,11 @@ fn capture(app: &mut App, w: u16, h: u16) -> String {
 fn grafite_code_panels_header_and_single_ten_million_bar() {
     let mut app = app();
     app.screen = Screen::Session;
-    app.transcript.text(
+    app.transcript.text_in_mode(
         Speaker::Assistant,
         "Validação concluída. Preparando os testes.",
         false,
+        Some(myagent_protocol::Mode::Build),
     );
     app.transcript.preview("first","write_file",r##"{"path":"src/validation.rs","content":"pub fn validate_value(value: i32) -> bool {\n    value >= 0\n}"}"##,CodeStatus::Applied);
     app.transcript.preview("second","write_file",r##"{"path":"tests/validation.rs","content":"#[test]\nfn zero_is_valid() {\n    assert!(validate_value(0));"##,CodeStatus::Generating);
@@ -94,5 +95,110 @@ fn small_resized_and_no_color_terminals_remain_valid() {
             assert_eq!(cell.fg, ratatui::style::Color::Reset);
             assert_eq!(cell.bg, ratatui::style::Color::Reset);
         }
+    }
+}
+
+#[test]
+fn workspace_labels_are_portable_and_do_not_modify_identity() {
+    use myagent_tui::render::workspace_name;
+    for (path, name) in [
+        (r"C:\Users\fixture\My-Agent", "My-Agent"),
+        ("/home/fixture/My-Agent/", "My-Agent"),
+        ("/Users/fixture/My-Agent", "My-Agent"),
+        ("C:\\", "C:"),
+        ("/", "/"),
+        (r"\\server\share\", "share"),
+        (r"\\?\C:\Users\fixture\My-Agent", "My-Agent"),
+    ] {
+        assert_eq!(workspace_name(path), name);
+        let mut app = app();
+        app.workspace = path.into();
+        let text = capture(&mut app, 100, 24);
+        assert!(text.lines().next().unwrap().contains(name));
+        assert_eq!(app.workspace, path);
+    }
+}
+
+#[test]
+fn multiline_geometry_and_cursor_are_stable_during_resize_and_navigation() {
+    use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+    for (w, h) in [(45, 13), (80, 24), (120, 36)] {
+        let mut app = app();
+        let empty = capture(&mut app, w, h);
+        let baseline = app.chat_area;
+        app.event(Event::Paste("🦀中文/example\n".repeat(50)));
+        let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();
+        for code in [
+            KeyCode::Left,
+            KeyCode::Up,
+            KeyCode::Home,
+            KeyCode::Down,
+            KeyCode::End,
+        ] {
+            app.event(Event::Key(KeyEvent::new(code, KeyModifiers::NONE)));
+            terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+            assert_eq!(app.chat_area, baseline);
+            let (x, y) = ratatui::backend::Backend::get_cursor_position(terminal.backend_mut())
+                .map(|p| (p.x, p.y))
+                .unwrap();
+            assert!(x > 0 && x < w - 1);
+            assert!(y > baseline.bottom() && y < h - 5);
+        }
+        let filled = capture(&mut app, w, h);
+        for marker in ["Mensagem", "Tokens:", "Tab modo"] {
+            assert_eq!(
+                empty.lines().position(|l| l.contains(marker)),
+                filled.lines().position(|l| l.contains(marker))
+            );
+        }
+    }
+}
+
+#[test]
+fn response_borders_retain_mode_colors_and_no_color_labels() {
+    use myagent_protocol::Mode;
+    for no_color in [false, true] {
+        let mut app = app();
+        app.no_color = no_color;
+        app.transcript
+            .text_in_mode(Speaker::Assistant, "planned", false, Some(Mode::Plan));
+        app.transcript
+            .text_in_mode(Speaker::Assistant, "built", false, Some(Mode::Build));
+        app.mode = Mode::Plan;
+        let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+        terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+        let buffer = terminal.backend().buffer();
+        let palette = app.theme.palette(no_color);
+        let mut found = 0;
+        for y in 2..app.chat_area.bottom() {
+            let line: String = (0..80).map(|x| buffer[(x, y)].symbol()).collect();
+            for (label, color) in [
+                ("My-Agent · PLAN", palette.plan),
+                ("My-Agent · BUILD", palette.build),
+            ] {
+                if line.contains(label) {
+                    assert_eq!(buffer[(0, y)].fg, color);
+                    found += 1;
+                }
+            }
+        }
+        assert_eq!(found, 2);
+    }
+}
+
+#[test]
+fn resizing_preserves_input_and_keeps_suggestions_above_the_editor() {
+    let mut app = app();
+    app.input.set("/");
+    let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
+    for (w, h) in [(100, 30), (45, 13), (80, 24), (120, 36)] {
+        terminal.backend_mut().resize(w, h);
+        terminal
+            .resize(ratatui::layout::Rect::new(0, 0, w, h))
+            .unwrap();
+        terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+        let y = app.chat_area.bottom() + 1;
+        assert_eq!(terminal.backend().buffer()[(2, y)].symbol(), "/");
+        assert_eq!(app.input.text(), "/");
     }
 }

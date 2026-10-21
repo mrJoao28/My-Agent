@@ -97,27 +97,47 @@ impl Input {
             self.cursor = start + path.len();
         }
     }
-    pub fn display_position(&self, width: usize) -> (usize, usize) {
+    /// The renderer and cursor share one grapheme-aware wrapping calculation.
+    pub fn visual(&self, width: usize) -> (Vec<String>, (usize, usize)) {
         let width = width.max(1);
-        let mut row = 0;
-        let mut col = 0;
-        for g in self.text[..self.cursor].graphemes(true) {
+        let mut lines = vec![String::new()];
+        let (mut col, mut row) = (0, 0);
+        let mut cursor = (0, 0);
+        let mut full = false;
+        for (index, g) in self.text.grapheme_indices(true) {
             if g == "\n" {
-                row += 1;
+                if !full {
+                    lines.push(String::new());
+                    row += 1;
+                }
                 col = 0;
-                continue;
+                full = false;
+            } else {
+                let w = g.width();
+                if col + w > width && col > 0 {
+                    lines.push(String::new());
+                    row += 1;
+                    col = 0;
+                }
+                if index == self.cursor {
+                    cursor = (col, row);
+                }
+                lines[row].push_str(g);
+                col += w;
+                full = col >= width;
+                if full {
+                    lines.push(String::new());
+                    row += 1;
+                    col = 0;
+                }
             }
-            let w = g.width();
-            if col + w > width {
-                row += 1;
-                col = 0;
-            }
-            col += w;
-            if col == width {
-                row += 1;
-                col = 0;
+            if index + g.len() == self.cursor {
+                cursor = (col, row);
             }
         }
-        (col, row)
+        (lines, cursor)
+    }
+    pub fn display_position(&self, width: usize) -> (usize, usize) {
+        self.visual(width).1
     }
 }

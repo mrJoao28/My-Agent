@@ -21,4 +21,6 @@ pub mod dialog;
 pub mod ports;
 pub mod preview;
 pub mod render;
+pub mod runtime;
+pub mod terminal;
 pub mod transcript;

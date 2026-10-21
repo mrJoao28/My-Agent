@@ -1062,3 +1062,9 @@ Etapa 4: renderização Grafite com seletor no cabeçalho sem Tab duplicado,
 caixa de entrada com indicador lateral, painéis de código por arquivo e uma
 única barra cumulativa de 10M. TestBackend/insta cobrem home, nova sessão,
 sessão, aprovação e diálogo; tamanhos reduzidos e NO_COLOR são verificados.
+
+Etapa 5: loop de terminal separado das tarefas assíncronas, canal limitado,
+cancelamento e espera de cleanup antes de sair. Guard de terminal com hook
+de panic restaura raw mode, cursor, mouse, paste e alternate screen. SIGTERM
+também solicita encerramento ordenado. Há um probe sem provider/estado real
+para reproduzir saída normal e panic em PTY.

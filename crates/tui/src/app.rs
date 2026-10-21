@@ -199,6 +199,8 @@ impl App {
         let next_model = self.model.clone();
         if let Some(view) = view {
             self.load(view, Screen::Session, false);
+        } else if let Some(tokens) = self.live_tokens.take() {
+            self.measured = Some(self.measured.unwrap_or(0).saturating_add(u64::from(tokens)));
         }
         self.mode = next_mode;
         self.model = next_model;
@@ -430,6 +432,10 @@ impl App {
         if self.busy() {
             return vec![];
         }
+        let Some(session) = self.session.clone() else {
+            self.notify("A sessão ainda não está pronta.", true);
+            return vec![];
+        };
         let content = if resume {
             None
         } else {
@@ -438,12 +444,8 @@ impl App {
             }
             Some(self.input.take())
         };
-        let Some(session) = &self.session else {
-            self.notify("A sessão ainda não está pronta.", true);
-            return vec![];
-        };
         let request = Submission {
-            session: session.clone(),
+            session,
             model: self.model.clone(),
             mode: self.mode,
             content: content.clone(),

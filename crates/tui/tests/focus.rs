@@ -150,3 +150,109 @@ fn partial_unicode_json_creates_safe_code_panels_without_marking_writes() {
     );
     assert!(approval.lines.join("\n").contains(&"x".repeat(3000)));
 }
+
+#[test]
+fn approval_scroll_and_mouse_stay_inside_the_top_layer() {
+    use crossterm::event::{MouseEvent, MouseEventKind};
+    let mut app = app();
+    let mut panel = approval("edit_file", true);
+    panel.max_scroll = 80;
+    app.approval = Some(panel);
+    key(&mut app, KeyCode::Down);
+    key(&mut app, KeyCode::PageDown);
+    assert_eq!(app.approval.as_ref().unwrap().scroll, 13);
+    app.event(Event::Mouse(MouseEvent {
+        kind: MouseEventKind::ScrollDown,
+        column: 2,
+        row: 3,
+        modifiers: KeyModifiers::NONE,
+    }));
+    assert_eq!(app.approval.as_ref().unwrap().scroll, 16);
+    assert_eq!(app.scroll, 0);
+    key(&mut app, KeyCode::End);
+    key(&mut app, KeyCode::Down);
+    assert_eq!(app.approval.as_ref().unwrap().scroll, 80);
+    key(&mut app, KeyCode::PageUp);
+    key(&mut app, KeyCode::Up);
+    assert_eq!(app.approval.as_ref().unwrap().scroll, 67);
+    key(&mut app, KeyCode::Home);
+    assert_eq!(app.approval.as_ref().unwrap().scroll, 0);
+    assert!(matches!(
+        key(&mut app, KeyCode::Char('n')).as_slice(),
+        [Action::Approve {
+            decision: Decision::Deny,
+            ..
+        }]
+    ));
+}
+
+#[test]
+fn code_panels_remain_previews_until_the_matching_tool_result() {
+    use myagent_tui::transcript::{Entry, Transcript};
+    let mut transcript = Transcript::default();
+    let raw = r#"{"path":"one.rs","content":"pub fn one() {}"}"#;
+    transcript.preview("one", "write_file", raw, CodeStatus::Generating);
+    let first = |transcript: &Transcript| match &transcript.entries[0] {
+        Entry::Code(code) => code.status.clone(),
+        _ => panic!("code expected"),
+    };
+    assert_eq!(first(&transcript), CodeStatus::Generating);
+    let args = serde_json::from_str(raw).unwrap();
+    transcript.call("one", "write_file", &args);
+    assert_eq!(first(&transcript), CodeStatus::AwaitingApproval);
+    transcript.preview(
+        "two",
+        "write_file",
+        r#"{"path":"two.rs","content":"unfinished"#,
+        CodeStatus::Generating,
+    );
+    transcript.result("other", "{}");
+    assert_eq!(first(&transcript), CodeStatus::AwaitingApproval);
+    transcript.result("one", r#"{"bytesWritten":15}"#);
+    assert_eq!(first(&transcript), CodeStatus::Applied);
+    transcript.interrupted();
+    assert!(transcript.entries.iter().any(|entry| matches!(entry, Entry::Code(code) if code.path == "two.rs" && code.status == CodeStatus::Interrupted)));
+    assert_eq!(first(&transcript), CodeStatus::Applied);
+}
+
+#[test]
+fn preview_character_limit_and_action_endpoints_are_explicit() {
+    let (text, truncated) = preview::bounded(&"🦀".repeat(45_000));
+    assert!(truncated);
+    assert!(text.encode_utf16().count() <= 80_000);
+    for (tool, args, expected) in [
+        (
+            "bash",
+            json!({"command":"printf 'fixture'"}),
+            vec!["printf 'fixture'"],
+        ),
+        (
+            "move_file",
+            json!({"from":"src/old.rs","to":"src/new.rs"}),
+            vec!["src/old.rs", "src/new.rs"],
+        ),
+        (
+            "delete_file",
+            json!({"path":"src/old.rs"}),
+            vec!["src/old.rs"],
+        ),
+        (
+            "write_file",
+            json!({"path":"new.rs","content":"Olá"}),
+            vec!["new.rs", "4 bytes", "Olá"],
+        ),
+    ] {
+        let panel = Approval::new(
+            "id".into(),
+            tool.into(),
+            args.as_object().unwrap().clone(),
+            None,
+            true,
+            None,
+        );
+        let text = panel.lines.join("\n");
+        for expected in expected {
+            assert!(text.contains(expected), "{tool}: missing {expected}");
+        }
+    }
+}

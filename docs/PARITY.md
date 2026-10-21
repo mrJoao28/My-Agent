@@ -1068,3 +1068,9 @@ cancelamento e espera de cleanup antes de sair. Guard de terminal com hook
 de panic restaura raw mode, cursor, mouse, paste e alternate screen. SIGTERM
 também solicita encerramento ordenado. Há um probe sem provider/estado real
 para reproduzir saída normal e panic em PTY.
+
+Etapa 6: a composição interativa exige aprovação do comando bash antes do
+Docker, vinculada a argumentos, sessão, workspace e cancelamento. Chamadas
+diretas não contornam a autorização quando o gate está configurado. Os
+runners fixos de teste/tipos mantêm a política isolada do M5. Teste com
+driver simulado confirma que nenhum container inicia antes do Y.

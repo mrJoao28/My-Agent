@@ -3,6 +3,7 @@
 mod approval;
 mod checkpoints;
 mod execution;
+mod execution_approval;
 mod file_mutations;
 mod files;
 mod git;

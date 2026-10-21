@@ -148,6 +148,12 @@ pub enum ProviderEvent {
     Text(String),
     Reasoning(String),
     ToolCall(ToolCall),
+    /// Untrusted display-only snapshot. Never authorizes or executes a tool.
+    ToolPreview {
+        id: String,
+        name: String,
+        arguments: String,
+    },
     Usage(u32),
     /// Estado opaco para signatures de thinking/function calls; nunca permissões.
     Metadata(Value),

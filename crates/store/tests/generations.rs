@@ -932,3 +932,26 @@ async fn losing_a_lease_cancels_a_long_tool_before_the_global_timeout() {
     assert!(stopped.load(Ordering::SeqCst));
     assert_eq!(f.rows().last().unwrap().status, MessageStatus::Interrupted);
 }
+
+#[tokio::test]
+async fn interrupted_display_previews_never_execute_or_persist_as_tool_calls() {
+    let f = Fixture::new();
+    let tool = FakeTool::new("write_file", Effect::Write);
+    let provider = Simulated::new(vec![Step::Fail(vec![ProviderEvent::ToolPreview {
+        id: "preview_only".into(),
+        name: "write_file".into(),
+        arguments: r#"{"path":"file.rs","content":"partial"#.into(),
+    }])]);
+    let agent = Agent::new(provider, f.journal(), vec![tool.clone()], None).unwrap();
+    let (result, events) = run(&agent, f.input()).await;
+    assert_eq!(result.unwrap_err(), AgentError::Network);
+    assert_eq!(tool.calls.load(Ordering::SeqCst), 0);
+    assert!(
+        events
+            .iter()
+            .any(|event| matches!(event, StreamEvent::ToolPreview { .. }))
+    );
+    let rows = f.rows();
+    assert_eq!(rows.last().unwrap().status, MessageStatus::Interrupted);
+    assert!(rows.last().unwrap().parts.is_empty());
+}

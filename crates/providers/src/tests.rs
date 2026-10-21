@@ -636,3 +636,18 @@ fn relative_models_path_loads_custom_models_instead_of_silently_using_defaults()
             .is_some()
     );
 }
+
+#[test]
+fn write_previews_arrive_before_complete_json_and_never_become_calls() {
+    let mut parser = WireParser::new(ProviderKind::Openai, 1);
+    parser.feed(&json!({"type":"response.output_item.added","output_index":0,"item":{"type":"function_call","call_id":"preview_1","name":"write_file","arguments":""}}).to_string()).unwrap();
+    let partial = r#"{"path":"src/lib.rs","content":"pub fn"#;
+    let events = parser.feed(&json!({"type":"response.function_call_arguments.delta","output_index":0,"delta":partial}).to_string()).unwrap();
+    assert!(events.iter().any(|event| matches!(event, ProviderEvent::ToolPreview { arguments, .. } if arguments == partial)));
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, ProviderEvent::ToolCall(_)))
+    );
+    assert!(parser.eof().is_err());
+}

@@ -9,10 +9,15 @@ use tokio_util::sync::CancellationToken;
 pub struct ExecutionRegistry {
     workspace: SafeWorkspace,
     docker: Option<Docker>,
+    gate: Option<crate::execution_approval::CommandGate>,
 }
 impl ExecutionRegistry {
     pub fn new(workspace: SafeWorkspace, docker: Option<Docker>) -> Self {
-        Self { workspace, docker }
+        Self {
+            workspace,
+            docker,
+            gate: None,
+        }
     }
     pub async fn detect(
         workspace: SafeWorkspace,
@@ -24,6 +29,29 @@ impl ExecutionRegistry {
             workspace,
             Docker::detect(config, driver, cancel).await?,
         ))
+    }
+    pub fn with_approvals(mut self, manager: crate::ApprovalManager) -> Self {
+        self.gate = Some(crate::execution_approval::CommandGate::new(manager));
+        self
+    }
+    pub fn forget_session(&self, session: &str) {
+        if let Some(gate) = &self.gate {
+            gate.forget(session);
+        }
+    }
+    async fn authorize(
+        &self,
+        name: &str,
+        args: &Map<String, Value>,
+        ctx: &ToolContext,
+    ) -> Result<()> {
+        validate(name, args)?;
+        if name == "bash"
+            && let Some(gate) = &self.gate
+        {
+            gate.authorize(&self.workspace, args, ctx).await?;
+        }
+        Ok(())
     }
     pub fn available(&self) -> bool {
         self.docker.is_some()
@@ -53,12 +81,9 @@ impl ExecutionRegistry {
         if !matches!(mode, Mode::Plan | Mode::Build) || (mode != Mode::Build && name == "bash") {
             return Err(Error::Denied);
         }
-        self.execute(
-            name,
-            args.as_object().ok_or(Error::InvalidInput)?.clone(),
-            ctx,
-        )
-        .await
+        let args = args.as_object().ok_or(Error::InvalidInput)?.clone();
+        self.authorize(name, &args, &ctx).await?;
+        self.execute(name, args, ctx).await
     }
     async fn execute(
         &self,
@@ -67,6 +92,11 @@ impl ExecutionRegistry {
         ctx: ToolContext,
     ) -> Result<Value> {
         validate(name, &args)?;
+        if name == "bash"
+            && let Some(gate) = &self.gate
+        {
+            gate.consume(&args, &ctx)?;
+        }
         let docker = self.docker.clone().ok_or(Error::Unavailable)?;
         let ws = self.workspace.clone();
         let name = name.to_owned();
@@ -321,7 +351,10 @@ impl Tool for ExecutionTool {
             if !self.registry.available() {
                 return Err(myagent_core::AgentError::ToolDenied);
             }
-            validate(self.name, args).map_err(Into::into)
+            self.registry
+                .authorize(self.name, args, &ctx)
+                .await
+                .map_err(Into::into)
         })
     }
     fn execute<'a>(
@@ -343,7 +376,7 @@ fn schema(name: &str) -> (&'static str, Value) {
     let timeout = json!({"type":"integer","minimum":1000,"maximum":120000});
     let (description, properties, required) = match name {
         "bash" => (
-            "Run a POSIX shell command ONLY in Docker, never on host; BUILD only. No network, root filesystem and filtered snapshot read-only, non-root, resource limits, disposable /tmp (64 MiB default). No approval required. Default timeout 30s/max 120s. At most 20000 UTF-16 units per stream; output overflow terminates execution.",
+            "Run a POSIX shell command ONLY in Docker, never on host; BUILD only. No network, root filesystem and filtered snapshot read-only, non-root, resource limits, disposable /tmp (64 MiB default). Interactive approval may be required by the backend. Default timeout 30s/max 120s. At most 20000 UTF-16 units per stream; output overflow terminates execution.",
             json!({"command":{"type":"string","minLength":1,"maxLength":20000},"timeoutMs":{"type":"integer","minimum":1,"maximum":120000}}),
             vec!["command"],
         ),

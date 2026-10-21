@@ -409,6 +409,12 @@ pub enum StreamEvent {
         tool_name: String,
         args: Map<String, Value>,
     },
+    /// Ephemeral, potentially incomplete JSON; not execution evidence.
+    ToolPreview {
+        tool_call_id: String,
+        tool_name: String,
+        arguments: String,
+    },
     ToolResult {
         tool_call_id: String,
         tool_name: String,
@@ -477,6 +483,15 @@ impl Validate for StreamEvent {
                 text(value, "text", MAX_JSON_BYTES)
             }
             Self::Usage { total_tokens } => count(*total_tokens),
+            Self::ToolPreview {
+                tool_call_id,
+                tool_name,
+                arguments,
+            } => {
+                validate_id(tool_call_id)?;
+                validate_id(tool_name)?;
+                text(arguments, "preview arguments", 65536)
+            }
             Self::ToolCall {
                 tool_call_id,
                 tool_name,

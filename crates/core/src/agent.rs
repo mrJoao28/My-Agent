@@ -429,6 +429,23 @@ impl Agent {
                 }
                 let reasoning = matches!(&event, ProviderEvent::Reasoning(_));
                 match event {
+                    ProviderEvent::ToolPreview {
+                        id,
+                        name,
+                        arguments,
+                    } => {
+                        if plan.tools.iter().all(|tool| tool.name != name) {
+                            return Err(AgentError::ToolDenied);
+                        }
+                        let preview = StreamEvent::ToolPreview {
+                            tool_call_id: id,
+                            tool_name: name,
+                            arguments,
+                        };
+                        preview.validate().map_err(|_| AgentError::Protocol)?;
+                        // Previews are ephemeral UI data, never journaled as calls.
+                        emit(events, preview, &input.cancellation).await?;
+                    }
                     ProviderEvent::Text(text) | ProviderEvent::Reasoning(text) => {
                         let part = if reasoning {
                             MessagePart::Reasoning { text: text.clone() }

@@ -565,3 +565,76 @@ async fn failed_container_cleanup_preserves_mount_and_reports_failure() {
     );
     std::fs::remove_dir_all(checked).unwrap();
 }
+
+#[tokio::test]
+async fn interactive_bash_requires_approval_even_through_direct_call_or_execute() {
+    use myagent_protocol::StreamEvent;
+    use myagent_tools::{ApprovalDecision, ApprovalManager};
+    use tokio::sync::mpsc;
+    let temp = tempfile::tempdir().unwrap();
+    let driver = Arc::new(Driver::default());
+    let approvals = ApprovalManager::default();
+    let registry = registry(temp.path(), driver.clone())
+        .await
+        .with_approvals(approvals.clone());
+    assert!(
+        registry
+            .call(
+                Mode::Build,
+                "bash",
+                json!({"command":"echo fixture"}),
+                context(CancellationToken::new())
+            )
+            .await
+            .is_err()
+    );
+    let bash = registry
+        .tools(Mode::Build)
+        .into_iter()
+        .find(|tool| tool.spec().name == "bash")
+        .unwrap();
+    assert!(
+        bash.execute(
+            json!({"command":"echo fixture"})
+                .as_object()
+                .unwrap()
+                .clone(),
+            context(CancellationToken::new())
+        )
+        .await
+        .is_err()
+    );
+    assert!(
+        !driver
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|args| args[0] == "run")
+    );
+    let (tx, mut rx) = mpsc::channel(4);
+    let mut ctx = context(CancellationToken::new());
+    ctx.events = Some(tx);
+    let (result, ()) = tokio::join!(
+        registry.call(Mode::Build, "bash", json!({"command":"echo fixture"}), ctx),
+        async {
+            let StreamEvent::ApprovalRequired {
+                approval_id, args, ..
+            } = rx.recv().await.unwrap()
+            else {
+                panic!("approval expected")
+            };
+            assert_eq!(args["command"], "echo fixture");
+            assert!(approvals.decide("session", &approval_id, ApprovalDecision::Once));
+        }
+    );
+    result.unwrap();
+    assert!(
+        driver
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|args| args[0] == "run")
+    );
+}

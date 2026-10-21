@@ -1,0 +1,28 @@
+---
+source: crates/tui/tests/rendering.rs
+expression: "capture(&mut app, 100, 24)"
+---
+My-Agent  │  my-agent / feat/m6-tui  │  Ollama · local  │                         PLAN   [BUILD]
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+                                              My-Agent
+
+                                             Nova sessão
+
+                        Descreva a tarefa ou digite / para abrir os comandos.
+
+
+
+
+
+
+
+┃ Mensagem ────────────────────────────────────────────────────────────────────────────────────────┐
+┃ Digite sua mensagem para o My-Agent...                                                           │
+┃                                                                                                  │
+┃──────────────────────────────────────────────────────────────────────────────────────────────────┘
+Tokens: 2.4M / 10M · 24%        ████████████████
+
+· Pronto · 0 sem medição
+Enter enviar · Ctrl+J nova linha · Tab modo · Esc/Ctrl+C interromper · / comandos

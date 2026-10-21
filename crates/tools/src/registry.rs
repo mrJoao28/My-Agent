@@ -98,6 +98,9 @@ impl ToolRegistry {
             .unwrap_or_else(|| json!([])))
     }
     pub fn clear_session(&self, session: &str) -> Result<()> {
+        if let Some(execution) = &self.execution {
+            execution.forget_session(session);
+        }
         if let Some(web) = &self.web {
             web.forget_session(session);
         }

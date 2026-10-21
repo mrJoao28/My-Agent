@@ -29,6 +29,9 @@ fn restore() {
     }
 }
 impl TerminalGuard {
+    pub fn is_active() -> bool {
+        ACTIVE.load(Ordering::SeqCst)
+    }
     pub fn enter() -> io::Result<(Self, NativeTerminal)> {
         if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
             return Err(io::Error::other("A TUI requer um terminal interativo."));

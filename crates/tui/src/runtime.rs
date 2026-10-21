@@ -227,6 +227,11 @@ pub fn run(
             if app.quitting && !app.busy() {
                 break;
             }
+            if !crate::terminal::TerminalGuard::is_active() {
+                return Err(io::Error::other(
+                    "A operação falhou; o terminal foi restaurado.",
+                ));
+            }
             terminal.draw(|frame| render::draw(frame, &mut app))?;
             if event::poll(Duration::from_millis(33))? {
                 let actions = app.event(event::read()?);
@@ -243,19 +248,22 @@ pub fn run(
             }
             app.tick();
             let mut pending = Vec::new();
+            let mut failed = false;
             for job in driver.jobs.drain(..) {
                 if job.is_finished() {
                     if runtime.block_on(job).is_err() {
-                        app.finish(
-                            None,
-                            Some("A operação foi interrompida por uma falha interna.".into()),
-                        );
+                        failed = true;
                     }
                 } else {
                     pending.push(job);
                 }
             }
             driver.jobs = pending;
+            if failed {
+                return Err(io::Error::other(
+                    "A operação foi interrompida por uma falha interna.",
+                ));
+            }
         }
         Ok(())
     })();

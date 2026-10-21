@@ -63,7 +63,13 @@ impl Provider for DemoProvider {
                 .await?;
                 let id = format!("demo_{}", NEXT.fetch_add(1, Ordering::Relaxed));
                 let args = json!({"path":path,"content":content});
-                let raw = args.to_string();
+                // Emit the filename first so the preview can grow before the
+                // complete call arrives; JSON object ordering is not semantic.
+                let raw = format!(
+                    "{{\"path\":{},\"content\":{}}}",
+                    json!(path),
+                    json!(content)
+                );
                 for (index, _) in raw.char_indices().step_by(8) {
                     send(
                         &events,

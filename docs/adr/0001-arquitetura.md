@@ -354,3 +354,22 @@ O parser de patches unified é próprio: permite aplicar um passo multiarquivo
 sem depender da existência de Git, valida tudo antes de escrever e não altera
 o índice. Efeitos parciais de I/O conservam os checkpoints para diagnóstico
 e desfazer; não se promete atomicidade entre arquivos distintos.
+
+## Adenda M5 — Docker e web
+
+O crate sandbox implementa a CLI Docker e sua supervisão; tools combina
+snapshot seguro, runners e WebClient. O grafo permanece sem ciclos, sem
+crates novas: reqwest/rustls, tempfile e thiserror são reutilizadas.
+Nenhum código de projeto é executado no host; ausência do daemon retira os
+comandos da lista, e PLAN nunca recebe bash.
+
+A imagem padrão passa da Bun do legado para rust:1.99.1-slim-bookworm,
+alinhada à reescrita. Runners legados continuam disponíveis mediante imagem
+compatível. Cargo opera offline e sobre cópia descartável. O snapshot é
+novo por execução; o cache de metadados legado permanece pendente.
+
+A web usa DNS validado e endereços fixados no transporte, com TLS padrão,
+proxies e redirects automáticos desativados. ApprovalManager é compartilhável
+com as mutações e memoriza apenas ferramenta/sessão/origem exata.
+Alternativas, limites e execução opcional de Docker real estão em
+[Sandbox e web M5](../sandbox-web.md).

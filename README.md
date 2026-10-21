@@ -9,8 +9,9 @@ tools, platform, sandbox, store, tui e cli. O binário `myagent` oferece apenas 
 versão. As bibliotecas incluem contratos, SQLite local e o núcleo de geração
 com providers Anthropic, OpenAI, Google e Ollama, além de 17 ferramentas
 locais de inspeção e nove ferramentas de alteração com aprovação e checkpoints.
-Conversa e diálogos na CLI/TUI, web e execução de processos do projeto
-continuam para os próximos milestones.
+As bibliotecas também oferecem dois adapters web com aprovação por origem e
+três comandos exclusivamente em Docker. Conversa e diálogos na CLI/TUI
+continuam para o milestone de interface.
 O tipo Mode prevê evolução, mas somente Plan e Build estão declarados.
 
 A arquitetura está aceita no [ADR 0001](docs/adr/0001-arquitetura.md): canais
@@ -21,6 +22,7 @@ Providers, configuração de modelos, limites e testes simulados estão em
 [Gerações M2](docs/generations.md).
 Ferramentas, limites e proteções estão em [Inspeção M3](docs/tools.md).
 Consentimento, checkpoints e desfazer estão em [Alterações M4](docs/mutations.md).
+Isolamento, runners e proteção SSRF estão em [Sandbox e web M5](docs/sandbox-web.md).
 As escolhas e alternativas estão justificadas no ADR.
 Consulte a [matriz de paridade](docs/PARITY.md) para comportamentos e testes a portar.
 

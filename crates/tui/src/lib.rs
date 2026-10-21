@@ -15,3 +15,9 @@ pub fn safe_text(text: &str) -> String {
         .collect::<String>()
         .replace('\t', "    ")
 }
+pub mod app;
+pub mod approval;
+pub mod dialog;
+pub mod ports;
+pub mod preview;
+pub mod transcript;

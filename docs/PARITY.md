@@ -1051,3 +1051,9 @@ escolhido pelo usuário, com Nightfox/Papel alternativos e NO_COLOR.
 preferences.json tem tamanho limitado e gravação por temporário; falhas de
 leitura preservam o arquivo e permitem fallback visual. Entrada multilinha
 respeita 9000 unidades UTF-16, grafemas Unicode e sanitização de controles.
+
+Etapa 3: reducer independente de terminal para home/nova sessão/sessão,
+modais, comandos locais, retomada explícita e foco. Aprovações têm escopo,
+prévia limitada, Y/A/N e confirmação M para main; Enter/Tab não aprovam.
+Prévias parciais decodificam escapes Unicode sem inferir efeito aplicado;
+painéis de cada arquivo preservam estados diferentes. /undo é ação local.

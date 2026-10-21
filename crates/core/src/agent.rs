@@ -530,6 +530,14 @@ impl Agent {
             for call in calls {
                 guard.register(&call.name, &call.args)?;
                 let tool = self.tools.get(&call.name).ok_or(AgentError::ToolDenied)?;
+                let limits = tool.limits();
+                if serde_json::to_vec(&call.args)
+                    .map_err(|_| AgentError::Protocol)?
+                    .len()
+                    > limits.input_bytes
+                {
+                    return Err(AgentError::Limit);
+                }
                 let context = ToolContext {
                     session_id: input.session_id.clone(),
                     cancellation: input.cancellation.clone(),
@@ -577,9 +585,10 @@ impl Agent {
                     let mut output = match result {
                         Ok(value) => value,
                         Err(AgentError::Cancelled) => return Err(AgentError::Cancelled),
+                        Err(AgentError::ToolFailure(code)) => format!("Tool failed: {code}"),
                         Err(_) => "Tool failed: execution failed".into(),
                     };
-                    if output.len() > 1024 * 1024 {
+                    if output.len() > limits.output_bytes {
                         return Err(AgentError::Limit);
                     }
                     if matches!(

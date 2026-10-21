@@ -7,8 +7,9 @@ com uma arquitetura idiomática em Rust, para Windows, Linux e macOS.
 O repositório contém um workspace com oito crates: protocol, core, providers,
 tools, sandbox, store, tui e cli. O binário `myagent` oferece apenas ajuda e
 versão. As bibliotecas incluem contratos, SQLite local e o núcleo de geração
-com providers Anthropic, OpenAI, Google e Ollama. Conversa na CLI/TUI e
-ferramentas de produção continuam para os próximos milestones.
+com providers Anthropic, OpenAI, Google e Ollama, além de 17 ferramentas
+locais de inspeção. Conversa na CLI/TUI, escrita, web e execução de
+processos do projeto continuam para os próximos milestones.
 O tipo Mode prevê evolução, mas somente Plan e Build estão declarados.
 
 A arquitetura está aceita no [ADR 0001](docs/adr/0001-arquitetura.md): canais
@@ -17,6 +18,7 @@ e tree-sitter com compilador C no build. As dependências do M1 e os contratos
 do store estão descritos em [Persistência M1](docs/persistence.md).
 Providers, configuração de modelos, limites e testes simulados estão em
 [Gerações M2](docs/generations.md).
+Ferramentas, limites e proteções estão em [Inspeção M3](docs/tools.md).
 As escolhas e alternativas estão justificadas no ADR.
 Consulte a [matriz de paridade](docs/PARITY.md) para comportamentos e testes a portar.
 

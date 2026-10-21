@@ -256,6 +256,7 @@ impl WireParser {
                 return Err(AgentError::Protocol);
             }
         } else {
+            self.emit_preview(index, events)?;
             self.emitted.insert(c.id.clone(), fingerprint);
             events.push(ProviderEvent::ToolCall(ToolCall {
                 id: c.id.clone(),
@@ -263,6 +264,22 @@ impl WireParser {
                 args,
             }));
         }
+        Ok(())
+    }
+    fn emit_preview(&self, index: u64, events: &mut Vec<ProviderEvent>) -> Result<()> {
+        let c = self.calls.get(&index).ok_or(AgentError::Protocol)?;
+        if !matches!(c.name.as_str(), "write_file" | "edit_file" | "apply_patch") || c.id.is_empty()
+        {
+            return Ok(());
+        }
+        if c.args.len() > 65536 {
+            return Err(AgentError::Limit);
+        }
+        events.push(ProviderEvent::ToolPreview {
+            id: c.id.clone(),
+            name: c.name.clone(),
+            arguments: c.args.clone(),
+        });
         Ok(())
     }
     fn finish(&mut self, events: &mut Vec<ProviderEvent>) -> Result<()> {
@@ -383,6 +400,7 @@ impl WireParser {
                     return Err(AgentError::Limit);
                 }
                 c.args.push_str(delta);
+                self.emit_preview(index, e)?;
             }
             "response.completed" => {
                 if v["response"]["status"] != "completed" {
@@ -491,6 +509,7 @@ impl WireParser {
                             return Err(AgentError::Limit);
                         }
                         c.args.push_str(part);
+                        self.emit_preview(index, e)?;
                     }
                     _ => {}
                 }
@@ -577,6 +596,7 @@ impl WireParser {
                         }
                         c.args.push_str(args);
                     }
+                    self.emit_preview(index, e)?;
                 }
             }
             if let Some(reason) = choice["finish_reason"].as_str() {

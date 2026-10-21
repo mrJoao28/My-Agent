@@ -209,3 +209,19 @@ fn encoding_stops_at_the_byte_budget_and_json_depth_is_bounded() {
     };
     assert!(part.validate().is_err());
 }
+
+#[test]
+fn preview_is_a_bounded_ephemeral_event_with_valid_ids() {
+    let event = StreamEvent::ToolPreview {
+        tool_call_id: "preview".into(),
+        tool_name: "write_file".into(),
+        arguments: "{\"content\":\"partial".into(),
+    };
+    assert_eq!(round_trip(&event), event);
+    let oversized = StreamEvent::ToolPreview {
+        tool_call_id: "preview".into(),
+        tool_name: "write_file".into(),
+        arguments: "x".repeat(65537),
+    };
+    assert!(oversized.validate().is_err());
+}

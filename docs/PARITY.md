@@ -1025,3 +1025,20 @@ nenhuma falha e um teste Docker real ignorado. Ajuda e versão também conferida
 Windows/macOS não foram executados nativamente nesta máquina; os resultados
 remotos devem ser conferidos no workflow CI do commit correspondente.
 Docker real e providers externos não foram executados.
+
+## M6 — TUI Grafite (em implementação)
+
+O usuário autorizou a branch feat/m6-tui, commits por etapa e merge após
+validação. O layout escolhido mantém PLAN/BUILD no cabeçalho (sem Tab
+repetido), painéis sucessivos por arquivo e uma única barra cumulativa
+com escala de 10 milhões de tokens.
+
+O legado packages/cui/src e docs/APROVACOES_E_UNDO.md não estão disponíveis
+neste ambiente. O repositório My-Code-Agent retornou 404 na conexão GitHub.
+A implementação usa os contratos e a matriz acima; não se afirma inspeção
+do legado nem paridade visual verificada com ele.
+
+Etapa 1: eventos efêmeros ToolPreview ligam fragmentos de argumentos dos
+providers à interface. Não são chamadas, não entram no journal nem autorizam
+efeitos. JSON incompleto não executa ferramentas. Google só mostra prévias
+quando o provider efetivamente disponibiliza os argumentos.

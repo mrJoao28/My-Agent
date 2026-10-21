@@ -1042,3 +1042,12 @@ Etapa 1: eventos efêmeros ToolPreview ligam fragmentos de argumentos dos
 providers à interface. Não são chamadas, não entram no journal nem autorizam
 efeitos. JSON incompleto não executa ferramentas. Google só mostra prévias
 quando o provider efetivamente disponibiliza os argumentos.
+
+Etapa 2: ratatui 0.29 + crossterm 0.28 fornecem renderização e eventos de
+terminal; unicode-segmentation/unicode-width mantêm cursor e largura de
+texto; insta é somente dependência de testes. São dependências diretas
+justificadas pela TUI; não se adiciona SDK de IA. Grafite é o tema padrão
+escolhido pelo usuário, com Nightfox/Papel alternativos e NO_COLOR.
+preferences.json tem tamanho limitado e gravação por temporário; falhas de
+leitura preservam o arquivo e permitem fallback visual. Entrada multilinha
+respeita 9000 unidades UTF-16, grafemas Unicode e sanitização de controles.

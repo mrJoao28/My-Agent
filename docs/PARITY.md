@@ -71,9 +71,9 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | WRITE-03 | Árvores | `move_file` e `delete_file`: mover/excluir com validação de descendentes, destino existente e raiz protegida. Exclusão sempre exige aprovação individual. | `S/tools/move-file.ts`, `S/tools/delete-file.ts`, `S/utils/path.ts` | feito | `S/tools/files.test.ts`, `S/security/checkpoints.test.ts` |
 | WRITE-04 | Patch | `apply_patch`: diff unificado, checkOnly e validação de todos os caminhos antes de alterar; recusa binários, links, rename/copy e caminhos com espaços. | `S/tools/apply-patch.ts` | feito | `S/tools/git.test.ts`, `S/security/checkpoints.test.ts` |
 | TEST-01 | Descoberta | `test_discover`: convenções JS/TS, Python e Go, scripts e indícios de runners, com inspeção limitada; não enumera casos gerados em runtime. | `S/tools/test-discover.ts`, `S/lib/project-inspection.ts` | feito | `S/tools/inspection.test.ts` |
-| TEST-02 | Execução | `test_run`: Bun, Node, Vitest, Jest e Pytest, runners fixos com argumentos escapados; cópia descartável em /tmp, dependências referenciadas somente leitura; timeout/cancelamento/saída limitada; não infere quantidade de testes pelo exit code. | `S/tools/test-run.ts` | pendente | `S/tools/test-tools.test.ts`, `S/security/sandbox.integration.test.ts` |
-| TEST-03 | Tipos | `type_check`: diagnóstico TypeScript, caminhos Windows e linha/coluna; tsc local antes do global, somente na sandbox; disponível também em PLAN com Docker. | `S/tools/type-check.ts` | pendente | `S/services/message-format.test.ts`, `S/security/permissions.test.ts`, `S/security/docker-availability.test.ts` |
-| SHELL-01 | Shell | `bash`: exclusivo de BUILD e Docker; timeout/saída/cancelamento; projeto somente leitura no container e saídas descartáveis em /tmp. Não há fallback de execução no host. | `S/tools/bash.ts`, `S/security/sandbox.ts` | pendente | `S/security/permissions.test.ts`, `S/security/sandbox.test.ts`, `S/security/sandbox.integration.test.ts` |
+| TEST-02 | Execução | `test_run`: Bun, Node, Vitest, Jest e Pytest, runners fixos com argumentos escapados; cópia descartável em /tmp, dependências referenciadas somente leitura; timeout/cancelamento/saída limitada; não infere quantidade de testes pelo exit code. | `S/tools/test-run.ts` | feito | `S/tools/test-tools.test.ts`, `S/security/sandbox.integration.test.ts` |
+| TEST-03 | Tipos | `type_check`: diagnóstico TypeScript, caminhos Windows e linha/coluna; tsc local antes do global, somente na sandbox; disponível também em PLAN com Docker. | `S/tools/type-check.ts` | feito | `S/services/message-format.test.ts`, `S/security/permissions.test.ts`, `S/security/docker-availability.test.ts` |
+| SHELL-01 | Shell | `bash`: exclusivo de BUILD e Docker; timeout/saída/cancelamento; projeto somente leitura no container e saídas descartáveis em /tmp. Não há fallback de execução no host. | `S/tools/bash.ts`, `S/security/sandbox.ts` | feito | `S/security/permissions.test.ts`, `S/security/sandbox.test.ts`, `S/security/sandbox.integration.test.ts` |
 
 ## Git, checkpoints, sandbox e rede
 
@@ -86,13 +86,13 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | GIT-05 | Isolamento Git | Worktree explícita, ambiente reduzido; hooks/filtros/assinatura/pager/fsmonitor/diffs externos desativados; recusa metadata externa, links e alternates. Escritas Git serializadas. | `S/utils/git.ts`, `S/security/tool-policy.ts` | em andamento | `S/utils/git-scope.test.ts`, `S/tools/git.test.ts`, `S/tools/git-inspection.test.ts`, `S/tools/git-workflow.test.ts` |
 | UNDO-01 | Checkpoints | Checkpoint privado global por sessão antes de mutações de arquivos em BUILD; preserva bytes, EOL e modos; limites por arquivo/passo/store; inclui undo após falhas parciais. Não é commit Git nem snapshot de todo efeito externo. | `S/security/checkpoints.ts`, `S/security/tool-policy.ts` | feito | `S/security/checkpoints.test.ts` |
 | UNDO-02 | /undo | Desfaz último passo sem sobrescrever alterações posteriores; recusa conflito/geração ativa, valida workspace/lease, persiste nota para invalidar evidência anterior. Não cria commits. | `S/services/chat-service.ts`, `C/hooks/use-chat.ts`, `C/components/command-menu/commands.tsx` | em andamento | `S/security/checkpoints.test.ts`, `S/services/chat-recovery.test.ts`, `C/components/approval-undo.test.tsx` |
-| BOX-01 | Disponibilidade | Docker opcional para abrir o app; sem daemon não registrar bash/type_check/test_run. Verificação limitada, imagem padrão Bun, preparação/pull sob demanda e progresso, depois pull=never. | `S/security/sandbox.ts`, `S/index.ts`, `S/tools/index.ts`, `M/doctor.ts` | pendente | `S/security/docker-availability.test.ts`, `S/security/sandbox.test.ts`, `S/launcher.test.ts` |
-| BOX-02 | Container | Rede desativada, rootfs e bind mount somente leitura, usuário não root, capabilities removidas, no-new-privileges, tmpfs privado e limites de CPU/memória/processos. Cancelamento/timeout encerram processos/container. | `S/security/sandbox.ts` | pendente | `S/security/sandbox.test.ts`, `S/security/sandbox.integration.test.ts` |
-| BOX-03 | Snapshot | Cópia filtrada, sem metadata Git, segredos, links e builds; limites por arquivo/bytes/entradas/profundidade. Dependências omitidas por padrão; opt-in filtrado para node_modules/.venv e tratamento restrito de .bin. | `S/security/snapshot.ts` | pendente | `S/security/snapshot.test.ts`, `S/security/sandbox.integration.test.ts` |
+| BOX-01 | Disponibilidade | Docker opcional para abrir o app; sem daemon não registrar bash/type_check/test_run. Verificação limitada, imagem padrão Bun, preparação/pull sob demanda e progresso, depois pull=never. | `S/security/sandbox.ts`, `S/index.ts`, `S/tools/index.ts`, `M/doctor.ts` | em andamento | `S/security/docker-availability.test.ts`, `S/security/sandbox.test.ts`, `S/launcher.test.ts` |
+| BOX-02 | Container | Rede desativada, rootfs e bind mount somente leitura, usuário não root, capabilities removidas, no-new-privileges, tmpfs privado e limites de CPU/memória/processos. Cancelamento/timeout encerram processos/container. | `S/security/sandbox.ts` | feito | `S/security/sandbox.test.ts`, `S/security/sandbox.integration.test.ts` |
+| BOX-03 | Snapshot | Cópia filtrada, sem metadata Git, segredos, links e builds; limites por arquivo/bytes/entradas/profundidade. Dependências omitidas por padrão; opt-in filtrado para node_modules/.venv e tratamento restrito de .bin. | `S/security/snapshot.ts` | feito | `S/security/snapshot.test.ts`, `S/security/sandbox.integration.test.ts` |
 | BOX-04 | Cache de snapshot | Reuso por sessão/workspace e invalidação por inventário/metadados/configuração, leases serializados, expiração ociosa e limite de entradas. Não é hash de conteúdo nem cache persistente entre processos. | `S/security/snapshot.ts` | pendente | `S/security/snapshot.test.ts` |
-| WEB-01 | Busca | `web_search` via Tavily: aprovação, snippets estruturados, schema, deadline, limite durante leitura e cancelamento; falhas sanitizadas. | `S/tools/web-search.ts`, `S/lib/tool-io.ts` | pendente | `S/tools/web.test.ts`, `S/lib/tool-io.test.ts` |
-| WEB-02 | Fetch | `web_fetch`: aprovação por origem completa, redirects não podem ampliar grant; extração de texto HTML, remoção de conteúdo ativo, entidades, limite de bytes/texto e cancelamento. | `S/tools/web-fetch.ts`, `S/security/approval-scope.ts` | pendente | `S/tools/web.test.ts`, `S/security/approval-scope.test.ts` |
-| WEB-03 | SSRF | Bloqueio de destinos internos, IPs mapeados/IPv6 e DNS misto; conexão presa ao IP validado, preservando Host/TLS; sem segunda resolução permissiva. | `S/tools/web-fetch.ts` | pendente | `S/tools/web-ssrf.test.ts`, `S/tools/web.test.ts` |
+| WEB-01 | Busca | `web_search` via Tavily: aprovação, snippets estruturados, schema, deadline, limite durante leitura e cancelamento; falhas sanitizadas. | `S/tools/web-search.ts`, `S/lib/tool-io.ts` | feito | `S/tools/web.test.ts`, `S/lib/tool-io.test.ts` |
+| WEB-02 | Fetch | `web_fetch`: aprovação por origem completa, redirects não podem ampliar grant; extração de texto HTML, remoção de conteúdo ativo, entidades, limite de bytes/texto e cancelamento. | `S/tools/web-fetch.ts`, `S/security/approval-scope.ts` | feito | `S/tools/web.test.ts`, `S/security/approval-scope.test.ts` |
+| WEB-03 | SSRF | Bloqueio de destinos internos, IPs mapeados/IPv6 e DNS misto; conexão presa ao IP validado, preservando Host/TLS; sem segunda resolução permissiva. | `S/tools/web-fetch.ts` | feito | `S/tools/web-ssrf.test.ts`, `S/tools/web.test.ts` |
 
 ## Persistência, sessões, contexto e instruções
 
@@ -774,6 +774,7 @@ Arquivos para revisão/commit:
 - `docs/PARITY.md`
 - `docs/tools.md`
 
+
 ### Preparação do commit M3
 
 Revisados os 17 arquivos listados para nomes proibidos, padrões comuns
@@ -884,3 +885,115 @@ Arquivos para revisão e commit:
 - `docs/mutations.md`
 - `docs/persistence.md`
 - `docs/tools.md`
+
+## M5 — execução isolada e acesso à web
+
+Implementados `bash`, `type_check`, `test_run`, `web_fetch` e `web_search`.
+Fontes conferidas: `S/security/sandbox.ts`, `S/security/snapshot.ts`,
+`S/tools/bash.ts`, `S/tools/type-check.ts`, `S/tools/test-run.ts`,
+`S/tools/web-fetch.ts`, `S/tools/web-search.ts`, `S/tools/web-ssrf.test.ts`
+e `docs/SEGURANCA_E_TESTES.md` do legado. Contratos, diferenças e justificativas
+estão em [Sandbox e web M5](sandbox-web.md) e na adenda do ADR.
+
+Docker é detectado em até três segundos; sem daemon Linux os três comandos
+somem da lista. PLAN nunca oferece bash. O container tem rede desativada,
+rootfs/snapshot somente leitura, usuário não root, capabilities removidas,
+no-new-privileges e limites de recursos. Não há fallback no host. A limpeza
+precede a remoção do snapshot e, se falhar, conserva o mount e retorna erro.
+
+A imagem recomendada e implementada é rust:1.99.1-slim-bookworm. Acrescentados
+Cargo test/check offline, preservando os cinco runners legados. Snapshot
+filtrado aplica 5 MiB por arquivo, 200 MiB, 20 mil entradas e profundidade 64;
+opt-in de dependências continua sujeito aos limites globais. A cópia é nova
+por execução: o cache de metadados/TTL legado permanece pendente em BOX-04.
+
+Web exige aprovação por ferramenta/sessão/origem, valida todos os registros
+DNS e fixa os IPs no transporte, preservando Host e verificação TLS. Recusa
+redirecionamento para outra origem, proxies, redes internas/reservadas e
+metadata de nuvem. Os limites são aplicados durante a leitura; conteúdo
+retornado não concede permissões. Tavily usa chave fictícia nos testes.
+
+### Validação M5 — Windows, 21/10/2026
+
+Gates finais passaram com CARGO_HOME=.cargo-cache e target/m4-gates,
+reaproveitando dependências já compiladas:
+
+- `cargo fmt --all --check`.
+- `cargo clippy --locked --offline --workspace --all-targets -- -D warnings`.
+- `cargo test --locked --offline --workspace --config 'profile.test.package.myagent-tools.codegen-units=11' --config 'profile.test.package.myagent-sandbox.codegen-units=11'`.
+
+**161 testes aprovados, zero falhas e 1 ignorado**, que não entra nos aprovados.
+Distribuição: CLI 3, core 9, protocol 5, providers 16, sandbox/processos 4,
+store 4, gerações 20, persistência 12, unitários tools 14, instruções 3,
+execução isolada 8, mutações 30, ferramentas somente leitura 25 e web 8.
+Os doc-tests não contêm casos e não foram somados como testes aprovados.
+
+O teste ignorado é exclusivamente a integração Docker real. A variável
+MYAGENT_TEST_DOCKER_IMAGE não está definida neste ambiente; nenhum container
+real foi executado. Há comando documentado e job Linux opcional no CI para
+essa validação. O teste de shims Unix também aguarda execução no CI, pois não
+é compilado no Windows. Linux/macOS e CI remoto não foram executados aqui.
+
+Os casos executados cobrem ausência de Docker/lista por modo, deadline de
+detecção, flags e mount filtrado, runners, timeout/cancelamento/abandono,
+falha de limpeza, limites de snapshot, hard links e junctions; IPs reservados,
+DNS misto, rebinding inicial e após redirect, escopo de origem, negação,
+consumo de autorização, HTML, tamanhos, erros e respostas Tavily.
+HTTP local real confere IP fixado, Host, limite em chunks e encerramento
+da conexão cancelada. Não houve chamada externa a Tavily ou modelos pagos,
+nem testes Bun do legado. TLS público real não foi exercitado.
+
+As primeiras verificações Clippy identificaram condições aninhadas e um
+guard de mutex com escopo que abrangia await no teste; ambos corrigidos.
+Não houve falha de testes na suíte completa inicial ou final do M5.
+Na revisão, o cache Cargo da imagem passou a ser referenciado em vez de
+copiado ao tmpfs; diagnóstico tsc/Cargo e falhas de limpeza receberam testes.
+
+CARGO_PROFILE_DEV_DEBUG=0, CARGO_PROFILE_TEST_DEBUG=0 e CARGO_INCREMENTAL=0
+reduziram o consumo de disco. Os overrides locais de codegen-units evitaram
+reutilizar nomes de executáveis já usados no ambiente Windows; não mudam
+fontes, features, assertions ou seleção de testes. Esses perfis não foram
+gravados no repositório. Nenhum unsafe novo nem crate inédita foi adicionado;
+reqwest, tempfile e thiserror foram reutilizadas por necessidade concreta.
+
+Permanecem pendentes: Docker real, CI Linux/macOS, BOX-04 e integração de
+CLI/TUI/doctor/progresso de preparação. A matriz mantém BOX-01 e MODE-01 em
+andamento por esses pontos de interface e integração, sem marcar a paridade
+completa do produto. Learn não foi implementado.
+
+Commit proposto: `feat: add Docker sandbox and approved web tools`.
+Nenhum commit, push ou PR do M5 foi executado pelo assistente.
+
+### Preparação do commit M5
+
+Revisados os 18 arquivos alterados/novos: nenhum nome proibido nem padrão
+comum de credenciais encontrado, UTF-8/LF e `git diff --check` válidos.
+Essa busca não garante detectar todo segredo possível. Cargo metadata
+confirmou nove crates sem ciclos e licenças MIT/Apache-2.0 nas dependências
+reutilizadas. cargo-deny não foi executado.
+
+O git add foi recusado por falta de permissão para criar `.git/index.lock`.
+O staged está vazio; o usuário precisa prepará-lo no terminal e os blobs
+staged precisam de nova conferência antes de qualquer commit autorizado.
+Não houve alterações de implementação após os gates finais.
+
+Arquivos para revisão/commit:
+
+- `.github/workflows/ci.yml`
+- `Cargo.lock`
+- `README.md`
+- `crates/sandbox/Cargo.toml`
+- `crates/sandbox/src/lib.rs`
+- `crates/sandbox/src/docker.rs`
+- `crates/tools/Cargo.toml`
+- `crates/tools/src/lib.rs`
+- `crates/tools/src/registry.rs`
+- `crates/tools/src/execution.rs`
+- `crates/tools/src/snapshot.rs`
+- `crates/tools/src/web.rs`
+- `crates/tools/tests/docker_real.rs`
+- `crates/tools/tests/isolated_execution.rs`
+- `crates/tools/tests/web.rs`
+- `docs/PARITY.md`
+- `docs/adr/0001-arquitetura.md`
+- `docs/sandbox-web.md`

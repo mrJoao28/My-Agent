@@ -756,6 +756,7 @@ dependencies = [
 name = "myagent-sandbox"
 version = "0.1.0"
 dependencies = [
+ "thiserror",
  "tokio",
  "tokio-util",
 ]
@@ -789,6 +790,7 @@ dependencies = [
  "myagent-sandbox",
  "myagent-store",
  "regex",
+ "reqwest",
  "serde",
  "serde_json",
  "sha2",

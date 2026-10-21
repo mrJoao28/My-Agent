@@ -2,6 +2,7 @@
 //! Ferramentas de inspeção com autorização de workspace e limites nas bordas.
 mod approval;
 mod checkpoints;
+mod execution;
 mod file_mutations;
 mod files;
 mod git;
@@ -11,6 +12,14 @@ mod instructions;
 mod io;
 mod mutation_io;
 mod mutations;
+mod snapshot;
+mod web;
+pub use execution::ExecutionRegistry;
+pub use snapshot::{Snapshot, SnapshotOptions};
+pub use web::{
+    NativeWebTransport, SystemResolver, WebClient, WebRegistry, WebRequest, WebResolver,
+    WebResponse, WebTransport, is_public_ip,
+};
 mod path;
 mod registry;
 mod search;
@@ -65,6 +74,20 @@ pub enum Error {
     Timeout,
     #[error("TOOL_UNAVAILABLE")]
     Unavailable,
+    #[error("SANDBOX_ERROR: {0}")]
+    Sandbox(#[from] myagent_sandbox::SandboxError),
+    #[error("SNAPSHOT_LIMIT")]
+    SnapshotLimit,
+    #[error("SNAPSHOT_CHANGED")]
+    SnapshotChanged,
+    #[error("SSRF_BLOCKED")]
+    Ssrf,
+    #[error("CROSS_ORIGIN_REDIRECT")]
+    CrossOrigin,
+    #[error("WEB_REQUEST_FAILED")]
+    Web,
+    #[error("TAVILY_API_KEY_REQUIRED")]
+    SearchKey,
     #[error("UNSAFE_GIT_METADATA_OR_CONFIG")]
     GitUnsafe,
     #[error("GIT_FAILED")]

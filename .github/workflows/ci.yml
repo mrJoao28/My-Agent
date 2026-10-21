@@ -5,11 +5,33 @@ on:
     branches: [main, 'feat/**', 'fix/**', 'chore/**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      docker_integration:
+        description: Executar integração Docker real no Linux
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
+  docker:
+    if: github.event_name == 'workflow_dispatch' && inputs.docker_integration
+    runs-on: ubuntu-latest
+    env:
+      MYAGENT_TEST_DOCKER_IMAGE: alpine:3
+      MYAGENT_TEST_SERVER_SENTINEL: fictitious-host-value
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar toolchain fixada
+        shell: bash
+        run: |
+          version=$(sed -n 's/^channel = "\([^"]*\)"/\1/p' rust-toolchain.toml)
+          rustup toolchain install "$version" --profile minimal
+      - name: Preparar imagem de integração
+        run: docker pull alpine:3
+      - name: Executar integração Docker explicitamente
+        run: cargo test --locked -p myagent-tools --test docker_real -- --ignored --nocapture
   rust:
     name: Rust (${{ matrix.os }})
     strategy:

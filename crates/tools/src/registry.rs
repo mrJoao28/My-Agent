@@ -32,6 +32,8 @@ type Todos = Arc<Mutex<HashMap<String, Value>>>;
 #[derive(Clone)]
 pub struct ToolRegistry {
     mutations: Option<crate::MutationRegistry>,
+    execution: Option<crate::ExecutionRegistry>,
+    web: Option<crate::WebRegistry>,
     workspace: SafeWorkspace,
     todos: Todos,
     sandbox_configured: bool,
@@ -40,6 +42,8 @@ impl ToolRegistry {
     pub fn new(workspace: SafeWorkspace, sandbox_configured: bool) -> Self {
         Self {
             mutations: None,
+            execution: None,
+            web: None,
             workspace,
             todos: Arc::new(Mutex::new(HashMap::new())),
             sandbox_configured,
@@ -63,10 +67,25 @@ impl ToolRegistry {
         if let Some(mutations) = &self.mutations {
             tools.extend(mutations.tools(mode));
         }
+        if let Some(execution) = &self.execution {
+            tools.extend(execution.tools(mode));
+        }
+        if let Some(web) = &self.web {
+            tools.extend(web.tools(mode));
+        }
         tools
     }
     pub fn with_mutations(mut self, mutations: crate::MutationRegistry) -> Self {
         self.mutations = Some(mutations);
+        self
+    }
+    pub fn with_execution(mut self, execution: crate::ExecutionRegistry) -> Self {
+        self.sandbox_configured = execution.available();
+        self.execution = Some(execution);
+        self
+    }
+    pub fn with_web(mut self, web: crate::WebRegistry) -> Self {
+        self.web = Some(web);
         self
     }
     pub fn session_todos(&self, session: &str) -> Result<Value> {
@@ -79,6 +98,9 @@ impl ToolRegistry {
             .unwrap_or_else(|| json!([])))
     }
     pub fn clear_session(&self, session: &str) -> Result<()> {
+        if let Some(web) = &self.web {
+            web.forget_session(session);
+        }
         if let Some(mutations) = &self.mutations {
             mutations.forget_session(session);
         }
@@ -118,7 +140,7 @@ impl ToolRegistry {
                 "project_inspect"|"test_discover"=>crate::inspect::execute(&this.workspace,&name,&args,&budget)?,
                 "environment_check"=>{
                     this.workspace.resolve_safe_path(".",true)?;
-                    json!({"server":{"platform":std::env::consts::OS,"arch":std::env::consts::ARCH,"myagent":env!("CARGO_PKG_VERSION")},"workspaceAccessible":true,"sandbox":{"configured":this.sandbox_configured,"verified":false,"network":false,"hostExecution":false,"dependenciesVerified":false,"nextStep":if this.sandbox_configured {"Verify the sandbox; host runtime does not prove image dependencies."} else {"Configure MYAGENT_SANDBOX_IMAGE before executing processes."}}})
+                    json!({"server":{"platform":std::env::consts::OS,"arch":std::env::consts::ARCH,"myagent":env!("CARGO_PKG_VERSION")},"workspaceAccessible":true,"sandbox":{"configured":this.sandbox_configured,"verified":this.execution.as_ref().is_some_and(|e|e.available()),"network":false,"hostExecution":false,"dependenciesVerified":false,"nextStep":if this.sandbox_configured {"Verify the sandbox; host runtime does not prove image dependencies."} else {"Configure MYAGENT_SANDBOX_IMAGE before executing processes."}}})
                 },
                 "todo_write"=>{
                     static NEXT: std::sync::atomic::AtomicU64=std::sync::atomic::AtomicU64::new(0);

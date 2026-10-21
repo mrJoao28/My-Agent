@@ -12,6 +12,12 @@ description = "Adapters seguros de ferramentas e instruções de projeto do My-A
 myagent-core.workspace = true
 myagent-protocol.workspace = true
 myagent-sandbox.workspace = true
+myagent-platform.workspace = true
+serde.workspace = true
+sha2 = "0.10"
+base64 = "0.22"
+getrandom = "0.4"
+url = "2"
 serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
@@ -28,6 +34,7 @@ winapi-util = "0.1"
 
 [dev-dependencies]
 tempfile.workspace = true
+myagent-store.workspace = true
 
 [lints]
 workspace = true

@@ -129,3 +129,12 @@ Recuperação respeita leases/workspaces, retomadas preservam generationId e
 usage é atualizado durante a geração. Contexto com signatures é salvo antes
 de efeitos; ao iniciar novo turno, reasoning antigo não é reintroduzido.
 Detalhes e testes em [Gerações M2](generations.md).
+
+## Integração M4
+
+StoreJournal verifica sessão, workspace e lease antes das alterações locais.
+O desfazer também exige ausência de geração IN_PROGRESS. Após restaurar,
+`append_undo_note` grava uma mensagem local `[UNDO]`, preservando o modelo e
+o modo da última mensagem. Não chama provider nem inicia uma geração.
+Os testes de mutação usam esse adapter com SQLite temporário, incluindo
+recusa por lease perdido e geração ativa.

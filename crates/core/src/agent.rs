@@ -44,10 +44,10 @@ pub struct Agent {
     tools: Arc<HashMap<String, Arc<dyn Tool>>>,
     instructions: Option<Arc<dyn InstructionSource>>,
 }
-struct Reservation(String);
+pub struct SessionActionGuard(String);
 static ACTIVE: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
-impl Reservation {
-    fn acquire(id: &str) -> Result<Self> {
+impl SessionActionGuard {
+    pub fn acquire(id: &str) -> Result<Self> {
         if !ACTIVE
             .get_or_init(Default::default)
             .lock()
@@ -59,7 +59,7 @@ impl Reservation {
         Ok(Self(id.into()))
     }
 }
-impl Drop for Reservation {
+impl Drop for SessionActionGuard {
     fn drop(&mut self) {
         if let Some(active) = ACTIVE.get()
             && let Ok(mut active) = active.lock()
@@ -149,7 +149,7 @@ impl Agent {
         if let Some(content) = &input.content {
             validate_user_content(content).map_err(|_| AgentError::Configuration)?;
         }
-        let _reservation = Reservation::acquire(&input.session_id)?;
+        let _reservation = SessionActionGuard::acquire(&input.session_id)?;
         let mut guard = ToolGuard::new(input.max_tool_calls)?;
         if input.cancellation.is_cancelled() {
             return Err(AgentError::Cancelled);
@@ -527,6 +527,15 @@ impl Agent {
             })
             .await?;
             let mut results = Vec::new();
+            if calls.len() > 1
+                && calls.iter().any(|call| {
+                    self.tools
+                        .get(&call.name)
+                        .is_some_and(|tool| tool.ends_generation_on_success())
+                })
+            {
+                return Err(AgentError::Protocol);
+            }
             for call in calls {
                 guard.register(&call.name, &call.args)?;
                 let tool = self.tools.get(&call.name).ok_or(AgentError::ToolDenied)?;
@@ -541,6 +550,8 @@ impl Agent {
                 let context = ToolContext {
                     session_id: input.session_id.clone(),
                     cancellation: input.cancellation.clone(),
+                    tool_call_id: call.id.clone(),
+                    events: Some(events.clone()),
                 };
                 let fingerprint = guard::key(&call.name, &call.args);
                 let replay = tool.spec().effect == Effect::Write || mutating_name(&call.name);
@@ -624,6 +635,9 @@ impl Agent {
                     name: call.name.clone(),
                     result: result.clone(),
                 };
+                let stop = tool.ends_generation_on_success()
+                    && !result.starts_with("Tool failed:")
+                    && !result.starts_with("Error:");
                 self.append(&state.message.id, part.clone()).await?;
                 emit(
                     events,
@@ -636,6 +650,9 @@ impl Agent {
                 )
                 .await?;
                 results.push(part);
+                if stop {
+                    return Ok(());
+                }
             }
             history.push(ModelMessage {
                 role: ModelRole::Tool,

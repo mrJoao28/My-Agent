@@ -92,9 +92,14 @@ pub struct ToolCall {
 pub struct ToolContext {
     pub session_id: String,
     pub cancellation: CancellationToken,
+    pub tool_call_id: String,
+    pub events: Option<mpsc::Sender<myagent_protocol::StreamEvent>>,
 }
 pub trait Tool: Send + Sync {
     fn spec(&self) -> ToolSpec;
+    fn ends_generation_on_success(&self) -> bool {
+        false
+    }
     fn limits(&self) -> ToolLimits {
         ToolLimits::default()
     }
@@ -164,6 +169,14 @@ pub struct PrepareGeneration {
 }
 /// Interface síncrona: o core faz a ponte com spawn_blocking.
 pub trait Journal: Send + Sync + 'static {
+    /// Fronteira local: verifica sessão, workspace e lease, sem adquirir novos leases.
+    fn check_session(&self, _session: &str, _workspace: &str, _idle: bool) -> Result<()> {
+        Err(AgentError::Configuration)
+    }
+    /// Mensagem local de undo, sem inferência. A implementação deve exigir sessão ociosa.
+    fn local_note(&self, _session: &str, _note: &str) -> Result<()> {
+        Err(AgentError::Persistence)
+    }
     fn prepare(&self, input: PrepareGeneration) -> Result<GenerationState>;
     fn append(&self, id: &str, part: MessagePart) -> Result<()>;
     fn started(&self, id: &str, call: &str) -> Result<()>;

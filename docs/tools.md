@@ -156,3 +156,12 @@ A API de parsing foi conferida na
 [documentação oficial do binding tree-sitter](https://docs.rs/tree-sitter/0.27.1/tree_sitter/struct.Parser.html);
 a construção de ignore, em
 [GitignoreBuilder](https://docs.rs/ignore/0.4.33/ignore/gitignore/struct.GitignoreBuilder.html).
+
+## Integração M4
+
+`ToolRegistry::with_mutations` incorpora nove ferramentas de alteração em
+BUILD, totalizando 26. PLAN continua com as 17 ferramentas de inspeção.
+O registry padrão permanece somente leitura até receber a configuração de
+consentimento, checkpoints e sessão. Contratos e diferenças estão em
+[Alterações M4](mutations.md). Os resultados acima registram a validação
+histórica do M3; os gates do M4 estão na matriz de paridade.

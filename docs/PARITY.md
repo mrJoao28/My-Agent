@@ -157,7 +157,7 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | EVAL-01 | Tarefas | Nove fixtures verificáveis: leitura, corrigir operador, função com teste, refatorar CRLF, script executável, busca em 240 módulos, AGENTS.md, leitura de 300 linhas e 30 leituras sucessivas. Inventário completo e diff esperado, sem executar código gerado no host. | `E/tasks.ts` | pendente | `E/runner.test.ts` |
 | EVAL-02 | Runner | Comparar vários modelos/tarefas pelo comando público exec/JSONL em Git/home temporários; relatório incremental de sucesso, calls, tokens reportados, duração e exit code; separar falhas de infraestrutura e tokens ausentes. | `E/runner.ts`, `E/cleanup.ts`, `E/README.md` | pendente | `E/runner.test.ts`, `M/exec.test.ts` |
 | EVAL-03 | Simulação | Dois perfis determinísticos, sem provider externo, passando pelo pipeline real; perfil B introduz regressão CRLF esperada; modo bundle/source identificado e cleanup Windows com retries/limites de diretório. Simulação não mede qualidade de modelos reais. | `E/simulation.ts`, `E/runner.ts`, `E/cleanup.ts` | pendente | `E/runner.test.ts`, `M/exec.test.ts`; simulação completa não executada nesta inspeção |
-| DIST-01 | Distribuição | Launcher público, versão, pacote executável e build com recursos/workers incluídos; portar instalação/execução em Rust com suporte aos três sistemas, sem obrigação de npm/Bun. Não publicar nem criar release nesta etapa. | `packages/myagent/build.ts`, `packages/myagent/package.json`, `packages/myagent/bin/myagent.js`, `scripts/package-smoke.ps1` | pendente | `M/launcher.test.ts`; smoke de pacote é script manual, não executado |
+| DIST-01 | Distribuição | Launcher público, versão e pacote executável; distribuição Rust via npm no M8, com binários nativos opcionais e sem compilação na instalação. Publicação/tag exigem autorizações separadas. | `packages/myagent/build.ts`, `packages/myagent/package.json`, `packages/myagent/bin/myagent.js`, `scripts/package-smoke.ps1` | em andamento | Launcher e tarballs Windows x64 testados; matriz nativa de cinco plataformas preparada, pendente de execução remota. Evidência do M8 abaixo e em `docs/npm-release.md`. |
 
 ## Inventário de ferramentas e disponibilidade
 
@@ -1267,3 +1267,94 @@ macOS nesta integração. WSL previamente consultado não tinha cargo/rustc;
 o CI existente de três sistemas foi preservado e não foi disparado. As
 imagens/mockup continuam indisponíveis. A validação automatizada Windows
 não substitui essas verificações externas/manuais.
+
+### M8 — distribuição npm preparada — 22/10/2026
+
+Foram lidos no legado, somente leitura, `.github/workflows/release.yml`,
+`docs/PREPARACAO_PUBLICACAO_NPM.md` e `docs/CLI_GLOBAL.md`. Reaproveitadas as
+lições de igualdade tag/versão, provenance/Trusted Publishers, tarball real
+e prefixo temporário com espaços. Nenhum artefato, configuração privada ou
+dependência instalada do legado foi copiado.
+
+Implementado `@j2008/myagent` com shim Node pequeno e cinco pacotes opcionais
+por plataforma, com os/cpu e versões exatas. O shim executa diretamente o
+binário existente, sem shell, herdando terminal, cwd, ambiente e argumentos.
+Preserva saída e trata sinais, com a distinção necessária entre POSIX e o
+console Windows. Não há compilação, downloads ou scripts de instalação.
+Nenhum crate novo ou alteração de implementação Rust foi necessário.
+PLAN, OAuth, Store, aprovações, checkpoints, leases e o layout M6 permanecem
+no mesmo binário e arquitetura já existentes.
+
+O workflow release.yml prepara builds nativos Windows x64, Linux musl
+x64/arm64 e macOS x64/arm64. Inspeciona formato/arquitetura, rejeita ELF com
+interpretador dinâmico, gera hashes e tarballs allowlisted. Os smokes usam
+registry local sem proxy, cache vazio e os seis tarballs reais, para resolver
+as optionalDependencies inéditas sem alterar manifests. Cinco relatórios de
+execução, receipts e checksums são exigidos antes da publicação. Há ainda
+um smoke Linux x64 em imagem Node sem Rust instalado.
+
+Cargo.toml, Cargo.lock, seis manifests npm, optionalDependencies exatas,
+tag vVERSION e --version são conferidos em conjunto. O helper version.mjs
+atualiza versões de forma coordenada; o teste faz isso numa cópia temporária.
+O principal é empacotado em Linux e deve manter modo executável no tarball.
+Os arquivos JS/MJS agora têm eol=lf explícito para preservar o shebang.
+
+Publicação foi apenas implementada e testada com callbacks fictícios.
+O job com OIDC exige push de tag, gates completos e environment npm-release;
+workflow_dispatch nunca publica. O publisher confere integridades existentes
+antes de qualquer escrita, publica plataformas ausentes primeiro, confirma
+disponibilidade e reconfirma o conjunto antes do principal, com --provenance.
+Versões existentes idênticas são reutilizadas; divergência bloqueia tudo.
+Não tenta sobrescrever versões nem tratar erro de rede como E404.
+
+O [guia de distribuição](npm-release.md) contém os seis cadastros Trusted
+Publisher, revisão obrigatória do environment, bootstrap manual eventual,
+comandos de validação e autorizações separadas para commit/push, criação e
+push de tag e publicação. Documenta recuperação parcial com os artefatos
+originais, sem re-publicar versões existentes ou mover tags. README inclui
+`npm i -g @j2008/myagent` após publicação autorizada.
+
+Validações realmente executadas em Windows x64/PowerShell, Node 26.8.1 e
+npm 11.19.0:
+
+| Verificação | Resultado |
+| --- | --- |
+| `cargo fmt --check` | Passou |
+| `cargo clippy --all-targets -- -D warnings` | Passou |
+| `cargo test --locked --workspace -- --test-threads=1` | 217 aprovados, zero falhas, um teste Docker real ignorado |
+| `cargo build --locked --release -p myagent-cli` | Build otimizado Windows x64 concluído |
+| `node --test scripts/npm/launcher.test.mjs` | 8 aprovados, 2 testes POSIX ignorados no Windows |
+| Sintaxe JS e YAML | node --check e parser YAML passaram |
+| actionlint 1.7.12 | Passou para release.yml; shellcheck/pyflakes desabilitados; binário obtido da release oficial e SHA-256 conferido |
+| Versões | Rust/npm/tag v0.1.0 conferidos; --version instalado retornou myagent 0.1.0 |
+| npm pack real | Principal 2.615 bytes; Windows x64 6.366.310 bytes; quatro arquivos por tarball, hashes e PE conferidos |
+| Instalação inédita simulada | npm global por nome/versão em registry local, cache vazio e prefixo com espaços; manifests não reescritos; ambos os tarballs efetivamente baixados |
+| Comando instalado | myagent.cmd --version, doctor --json com SQLite/estado gravável e exec PLAN offline passaram fora do checkout |
+| Isolamento do smoke | Home, npmrc e cache temporários; rustc/cargo/Bun inacessíveis no PATH; sem credenciais reais |
+| Launcher | Argumentos com espaços/aspas/metacaracteres/Unicode, stdin/stdout/stderr, cwd, ambiente, códigos 0/1/2/3/130 e erros de pacote passaram |
+| Política de publicação fictícia | Ordem, confirmação antes do principal, retomada idempotente, integridade divergente, pacote ausente e versão não visível cobertos sem publicar |
+
+Tarballs e recibos locais ficam em release/local-test, ignorado pelo Git.
+SHA-256 do principal:
+`b988c113c9d13c3c6d74c08272b9170b39b5966b47dd1a1f75c2cc74eddfbb58`.
+SHA-256 do pacote Windows:
+`0e4ade9290d8e1e7eceaa0478292259f9d72ae2fa9849c087f99353ee0e7d14d`.
+Esses são os tarballs locais Windows; o principal de produção será empacotado
+em Linux e testado novamente em toda a matriz, incluindo permissões POSIX.
+
+Houve bloqueios de cache npm e execução de .cmd na sandbox; a repetição
+autorizada passou. Corrigidas suposições do harness sobre hoisting da
+optionalDependency, quoting do .cmd em caminho com espaços e modo 0644 do
+npm pack Windows. LNK1104 em executáveis antigos impediu rodadas Rust;
+a rodada final passou em target/m8-gates, com dois jobs de build e testes
+em série. Foram usados apenas no ambiente CARGO_PROFILE_TEST_DEBUG=0,
+CARGO_PROFILE_DEV_DEBUG=0 e CARGO_INCREMENTAL=0. Símbolos PDB e cache
+incremental antigos foram removidos com autorização para liberar disco.
+
+Pendente: executar o workflow remoto nas cinco plataformas e no container
+sem Rust, sinais POSIX reais, TTY/Ctrl+C manual Windows, cadastro dos Trusted
+Publishers, autenticação/provenance e instalação a partir do npm público.
+Não houve build cruzado nem execução Rust Linux/macOS nesta entrega. A
+matriz configurada não é evidência de execução. Não houve publicação,
+criação/push de tag, commit, push, merge ou criação de branch. Arquivos novos
+foram incluídos somente com intenção de adição para permitir revisão do diff.

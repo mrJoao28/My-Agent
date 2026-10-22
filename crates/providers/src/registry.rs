@@ -13,6 +13,7 @@ pub enum ProviderKind {
     Openai,
     Google,
     Ollama,
+    Chatgpt,
 }
 impl ProviderKind {
     pub fn name(self) -> &'static str {
@@ -21,6 +22,7 @@ impl ProviderKind {
             Self::Openai => "openai",
             Self::Google => "google",
             Self::Ollama => "ollama",
+            Self::Chatgpt => "chatgpt",
         }
     }
 }
@@ -83,7 +85,7 @@ impl Model {
         if let Some(custom) = &self.api_key_env {
             return Some(custom.clone());
         }
-        if self.provider == ProviderKind::Ollama {
+        if matches!(self.provider, ProviderKind::Ollama | ProviderKind::Chatgpt) {
             return None;
         }
         let mut normalized = String::new();
@@ -122,6 +124,15 @@ impl Default for ModelRegistry {
 }
 impl ModelRegistry {
     pub const DEFAULT_MODEL: &'static str = "claude-opus-4-6";
+    pub fn replace_chatgpt(&mut self, models: Vec<Model>) {
+        self.models
+            .retain(|model| model.provider != ProviderKind::Chatgpt);
+        self.models.extend(
+            models
+                .into_iter()
+                .filter(|m| m.provider == ProviderKind::Chatgpt && m.id.starts_with("chatgpt:")),
+        );
+    }
     pub fn models(&self) -> &[Model] {
         &self.models
     }
@@ -144,6 +155,7 @@ impl ModelRegistry {
             if model.id.is_empty()
                 || model.id.len() > 200
                 || model.id.starts_with("chatgpt:")
+                || model.provider == ProviderKind::Chatgpt
                 || model.id.contains('\0')
                 || !ids.insert(model.id.clone())
                 || model.api_key_env.as_ref().is_some_and(|v| !valid_env(v))
@@ -257,6 +269,15 @@ pub struct ContextWindow {
 impl ModelRegistry {
     pub fn resolve_window(&self, id: &str, provider_hint: Option<u32>) -> Result<ContextWindow> {
         let model = self.find(id).ok_or(AgentError::Configuration)?;
+        if model.provider == ProviderKind::Chatgpt
+            && let Some(tokens) = model.context_window
+        {
+            return Ok(ContextWindow {
+                tokens,
+                estimated: false,
+                source: "account",
+            });
+        }
         if self.explicit_windows.contains(id) {
             return Ok(ContextWindow {
                 tokens: model.context_window.ok_or(AgentError::Configuration)?,

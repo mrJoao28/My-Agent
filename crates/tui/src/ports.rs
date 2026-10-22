@@ -24,8 +24,34 @@ pub struct Submission {
     pub mode: Mode,
     pub content: Option<String>,
 }
+#[derive(Clone, Debug)]
+pub enum AccountOperation {
+    Status,
+    Login(Option<String>),
+    Activate(String),
+    Logout(String),
+}
+#[derive(Clone, Debug, Default)]
+pub struct AccountView {
+    pub choices: Vec<(String, String)>,
+    pub note: String,
+}
 pub trait Backend: Send + Sync + 'static {
     fn models(&self) -> Vec<ModelChoice>;
+    fn refresh_models(
+        &self,
+        _cancel: CancellationToken,
+    ) -> BoxFuture<'_, Result<Vec<ModelChoice>>> {
+        Box::pin(async { Ok(self.models()) })
+    }
+    fn account(
+        &self,
+        _op: AccountOperation,
+        _cancel: CancellationToken,
+        _urls: mpsc::Sender<String>,
+    ) -> BoxFuture<'_, Result<AccountView>> {
+        Box::pin(async { Err(myagent_core::AgentError::Configuration) })
+    }
     fn sessions(&self) -> BoxFuture<'_, Result<Vec<Session>>>;
     fn new_session(&self) -> BoxFuture<'_, Result<SessionView>>;
     fn load_session(&self, id: String) -> BoxFuture<'_, Result<SessionView>>;

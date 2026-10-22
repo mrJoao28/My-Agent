@@ -158,8 +158,10 @@ executada e o workflow correspondente estão em [PARITY](PARITY.md).
 Para conferência manual, execute `--demo`: observe os dois painéis, teste
 Enter/Tab/Y/N na aprovação, `/undo`, diálogos, Esc/Ctrl+C, resize e saída.
 
-O diálogo `/chatgpt` informa que login de conta pertence ao M7; não declara
-conta conectada. No fechamento original do M6, o legado `packages/cui/src` e
+O diálogo `/chatgpt` gerencia registros OAuth, conta ativa, reautorização e
+logout; `/models` consulta o catálogo da conta ativa. O login apresenta uma
+URL para abertura manual no navegador. Veja [OAuth e CLI](oauth-cli.md).
+No fechamento original do M6, o legado `packages/cui/src` e
 `docs/APROVACOES_E_UNDO.md` não estavam acessíveis naquele ambiente. Nesta
 revisão, o documento de aprovação/undo foi lido no checkout local somente
 leitura do legado. Não houve comparação com screenshots ou mockups ausentes.

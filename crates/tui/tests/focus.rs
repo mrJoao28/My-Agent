@@ -19,6 +19,30 @@ fn app() -> App {
     app.session = Some("session".into());
     app
 }
+
+#[test]
+fn account_dialog_cancellation_does_not_submit_or_change_mode() {
+    use myagent_tui::ports::AccountOperation;
+    let mut app = app();
+    app.input.set("/chatgpt");
+    let actions = key(&mut app, KeyCode::Enter);
+    assert!(matches!(
+        actions.as_slice(),
+        [Action::Account(AccountOperation::Status)]
+    ));
+    assert!(app.loading);
+    assert!(key(&mut app, KeyCode::Enter).is_empty());
+    assert!(app.dialog.is_some());
+    assert!(!app.active);
+    assert_eq!(app.mode, Mode::Build);
+    assert!(matches!(
+        key(&mut app, KeyCode::Esc).as_slice(),
+        [Action::CancelLogin]
+    ));
+    assert!(!app.loading);
+    assert!(app.dialog.is_none());
+    assert_eq!(app.mode, Mode::Build);
+}
 fn key(app: &mut App, code: KeyCode) -> Vec<Action> {
     app.event(Event::Key(KeyEvent::new(code, KeyModifiers::NONE)))
 }

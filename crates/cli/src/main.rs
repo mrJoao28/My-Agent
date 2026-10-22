@@ -9,6 +9,7 @@ use myagent_tui::{
 use std::process::ExitCode;
 use std::{io::IsTerminal, path::PathBuf, sync::Arc};
 mod backend;
+mod commands;
 mod demo;
 
 fn command() -> Command {
@@ -45,21 +46,60 @@ fn command() -> Command {
         .arg(
             Arg::new("cwd")
                 .long("cwd")
+                .global(true)
                 .value_name("PATH")
                 .help("Diretório do projeto."),
         )
         .arg(
             Arg::new("model")
                 .long("model")
+                .global(true)
                 .value_name("ID")
                 .help("Modelo inicial do catálogo."),
         )
         .arg(
             Arg::new("demo")
                 .long("demo")
+                .global(true)
                 .help("Demonstração offline em diretório temporário descartável.")
                 .action(ArgAction::SetTrue)
                 .conflicts_with("cwd"),
+        )
+        .subcommand(
+            Command::new("exec")
+                .about("Executa uma tarefa sem TUI; PLAN por padrao.")
+                .arg(Arg::new("prompt").required(true))
+                .arg(
+                    Arg::new("mode")
+                        .long("mode")
+                        .value_parser(["plan", "build"])
+                        .default_value("plan"),
+                )
+                .arg(
+                    Arg::new("approve")
+                        .long("approve")
+                        .value_parser(["none", "reads", "all"])
+                        .default_value("none"),
+                )
+                .arg(
+                    Arg::new("allow-push")
+                        .long("allow-push")
+                        .action(ArgAction::SetTrue),
+                )
+                .arg(Arg::new("json").long("json").action(ArgAction::SetTrue)),
+        )
+        .subcommand(
+            Command::new("doctor")
+                .about("Diagnostica estado, modelos e sandbox; pode abrir/migrar SQLite.")
+                .arg(Arg::new("json").long("json").action(ArgAction::SetTrue)),
+        )
+        .subcommand(
+            Command::new("chatgpt")
+                .about("Gerencia registros OAuth ChatGPT sem trocar modelos automaticamente.")
+                .subcommand(Command::new("status"))
+                .subcommand(Command::new("login").arg(Arg::new("account").long("account")))
+                .subcommand(Command::new("use").arg(Arg::new("account").required(true)))
+                .subcommand(Command::new("logout").arg(Arg::new("account").required(true))),
         )
 }
 
@@ -93,6 +133,8 @@ fn main() -> ExitCode {
             Ok(()) => ExitCode::SUCCESS,
             Err(_) => ExitCode::FAILURE,
         }
+    } else if matches.subcommand().is_some() {
+        ExitCode::from(commands::run(&matches))
     } else {
         if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
             eprintln!("A TUI requer um terminal interativo. Use myagent --help.");
@@ -144,7 +186,7 @@ fn interactive(matches: &clap::ArgMatches) -> Result<(), Box<dyn std::error::Err
     let backend = Arc::new(runtime.block_on(backend::LocalBackend::open(&cwd, config, demo))?);
     let mut view = runtime.block_on(backend.initial(matches.get_flag("new")))?;
     if let Some(model) = matches.get_one::<String>("model") {
-        if !backend.valid_model(model) {
+        if !backend.valid_model(model) && !model.starts_with("chatgpt:") {
             return Err("Modelo desconhecido; consulte /models ou models.json.".into());
         }
         view.model = model.clone();

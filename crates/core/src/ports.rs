@@ -23,6 +23,8 @@ pub enum AgentError {
     Network,
     #[error("provider authentication missing or rejected")]
     Authentication,
+    #[error("ChatGPT plan permission unavailable; explicitly reconnect or select another model")]
+    PlanPermission,
     #[error("resource limit exceeded")]
     Limit,
     #[error("invalid configuration")]

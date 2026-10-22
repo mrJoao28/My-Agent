@@ -12,10 +12,13 @@ use myagent_tools::{
 };
 use myagent_tui::{
     approval::Decision,
-    ports::{Backend, ModelChoice, SessionView, Submission},
+    ports::{AccountOperation, AccountView, Backend, ModelChoice, SessionView, Submission},
 };
 use serde_json::json;
-use std::{path::Path, sync::Arc};
+use std::{
+    path::Path,
+    sync::{Arc, Mutex},
+};
 use tokio::sync::mpsc;
 
 #[derive(Clone)]
@@ -23,6 +26,8 @@ pub struct LocalBackend {
     store: Store,
     workspace: Workspace,
     models: ModelRegistry,
+    chatgpt: Option<myagent_providers::chatgpt::ChatGpt>,
+    account_models: Arc<Mutex<Vec<myagent_providers::Model>>>,
     tools: ToolRegistry,
     mutations: MutationRegistry,
     approvals: ApprovalManager,
@@ -56,6 +61,11 @@ impl LocalBackend {
             ModelRegistry::load(&config.home.join("models.json"))?
         };
         let checkpoints = CheckpointStore::from_home(&config.home);
+        let chatgpt = if demo || std::env::var("MYAGENT_ENABLE_CHATGPT").is_ok_and(|v| v == "0") {
+            None
+        } else {
+            Some(myagent_providers::chatgpt::ChatGpt::new(&config.home)?)
+        };
         let store = Store::open(config).map_err(persistence)?;
         store
             .recover_orphaned_generations(&workspace)
@@ -99,6 +109,8 @@ impl LocalBackend {
             store,
             workspace,
             models,
+            chatgpt,
+            account_models: Arc::new(Mutex::new(vec![])),
             tools,
             mutations,
             approvals,
@@ -112,6 +124,20 @@ impl LocalBackend {
     }
     pub fn valid_model(&self, id: &str) -> bool {
         self.models.find(id).is_some()
+            || self
+                .account_models
+                .lock()
+                .is_ok_and(|models| models.iter().any(|m| m.id == id))
+    }
+    fn registry(&self) -> Result<ModelRegistry> {
+        let mut registry = self.models.clone();
+        registry.replace_chatgpt(
+            self.account_models
+                .lock()
+                .map_err(|_| AgentError::Configuration)?
+                .clone(),
+        );
+        Ok(registry)
     }
     pub async fn initial(&self, fresh: bool) -> Result<SessionView> {
         if !fresh && let Some(session) = self.sessions().await?.first() {
@@ -155,7 +181,7 @@ impl LocalBackend {
             .iter()
             .rev()
             .map(|message| &message.model)
-            .find(|model| self.valid_model(model))
+            .next()
             .cloned()
             .unwrap_or_else(|| ModelRegistry::DEFAULT_MODEL.into());
         let mode = messages
@@ -176,7 +202,8 @@ impl LocalBackend {
 }
 impl Backend for LocalBackend {
     fn models(&self) -> Vec<ModelChoice> {
-        self.models
+        self.registry()
+            .unwrap_or_else(|_| self.models.clone())
             .models()
             .iter()
             .map(|model| ModelChoice {
@@ -186,13 +213,117 @@ impl Backend for LocalBackend {
                     .clone()
                     .unwrap_or_else(|| model.id.clone()),
                 configured: self.demo
-                    || model.provider == ProviderKind::Ollama
+                    || matches!(model.provider, ProviderKind::Ollama | ProviderKind::Chatgpt)
                     || model
                         .api_key_env()
                         .and_then(|name| std::env::var(name).ok())
                         .is_some_and(|key| !key.trim().is_empty()),
             })
             .collect()
+    }
+    fn refresh_models(&self, cancel: CancellationToken) -> BoxFuture<'_, Result<Vec<ModelChoice>>> {
+        Box::pin(async move {
+            self.account_models
+                .lock()
+                .map_err(|_| AgentError::Configuration)?
+                .clear();
+            if let Some(auth) = &self.chatgpt {
+                let statuses = auth.status(&cancel).await?;
+                if statuses.iter().any(|a| a.active && a.connected) {
+                    let models = auth.models(&cancel).await?;
+                    *self
+                        .account_models
+                        .lock()
+                        .map_err(|_| AgentError::Configuration)? = models;
+                }
+            }
+            Ok(self.models())
+        })
+    }
+    fn account(
+        &self,
+        op: AccountOperation,
+        cancel: CancellationToken,
+        urls: mpsc::Sender<String>,
+    ) -> BoxFuture<'_, Result<AccountView>> {
+        Box::pin(async move {
+            let Some(auth) = &self.chatgpt else {
+                return Ok(AccountView {
+                    choices: vec![],
+                    note: "ChatGPT desativado nesta execucao.".into(),
+                });
+            };
+            let mut note = String::new();
+            match op {
+                AccountOperation::Status => {}
+                AccountOperation::Login(id) => {
+                    let login = auth.start_login(id.as_deref(), &cancel).await?;
+                    urls.send(login.authorization_url.clone())
+                        .await
+                        .map_err(|_| AgentError::Cancelled)?;
+                    let status = auth.wait_login(login, &cancel).await?;
+                    if !status.plan_allowed {
+                        note =
+                            "Plano nao autorizado. Escolha reautorizar ou selecionar outro modelo."
+                                .into();
+                    }
+                }
+                AccountOperation::Activate(id) => auth.activate(&id, &cancel).await?,
+                AccountOperation::Logout(id) => {
+                    if !auth.logout(&id, &cancel).await? {
+                        note = "Logout local concluido; revogacao remota nao confirmada. Confira as configuracoes do ChatGPT.".into();
+                    }
+                }
+            }
+            self.account_models
+                .lock()
+                .map_err(|_| AgentError::Configuration)?
+                .clear();
+            let statuses = auth.status(&cancel).await?;
+            let mut choices = vec![(
+                "login".into(),
+                "Continuar com ChatGPT - adicionar conta/workspace".into(),
+            )];
+            for a in &statuses {
+                let state = if !a.connected {
+                    "desconectada"
+                } else if !a.plan_allowed {
+                    "plano nao autorizado"
+                } else {
+                    "conectada"
+                };
+                if a.active {
+                    note = format!("Conta ativa: {} - {state}. {note}", a.label);
+                }
+                if a.connected {
+                    choices.push((
+                        format!("activate:{}", a.client_id),
+                        format!("Ativar: {} - {state}", a.label),
+                    ));
+                }
+                choices.push((
+                    format!("login:{}", a.client_id),
+                    format!("Reautorizar: {}", a.label),
+                ));
+                if a.connected {
+                    choices.push((
+                        format!("logout:{}", a.client_id),
+                        format!("Sair: {}", a.label),
+                    ));
+                }
+            }
+            choices.push(("models".into(), "Escolher um modelo explicitamente".into()));
+            if statuses
+                .iter()
+                .any(|a| a.active && a.connected && a.plan_allowed)
+            {
+                match auth.models(&cancel).await {
+                    Ok(models) => *self.account_models.lock().map_err(|_| AgentError::Configuration)? = models,
+                    Err(error) => note.push_str(&format!(" Catalogo indisponivel: {error}. Selecione uma acao; nenhum modelo foi trocado.")),
+                }
+            }
+            Ok(AccountView { choices, note })
+        })
     }
     fn sessions(&self) -> BoxFuture<'_, Result<Vec<Session>>> {
         let this = self.clone();
@@ -223,18 +354,32 @@ impl Backend for LocalBackend {
         events: mpsc::Sender<StreamEvent>,
     ) -> BoxFuture<'_, Result<()>> {
         Box::pin(async move {
-            let model = self
-                .models
-                .find(&input.model)
-                .ok_or(AgentError::Configuration)?;
+            let mut account = None;
             let provider: Arc<dyn myagent_core::Provider> = if self.demo {
                 Arc::new(crate::demo::DemoProvider)
+            } else if input.model.starts_with("chatgpt:") {
+                let auth = self.chatgpt.as_ref().ok_or(AgentError::Authentication)?;
+                let models = auth.models(&cancel).await?;
+                if !models.iter().any(|model| model.id == input.model) {
+                    return Err(AgentError::Configuration);
+                }
+                *self
+                    .account_models
+                    .lock()
+                    .map_err(|_| AgentError::Configuration)? = models;
+                let provider = auth.provider(&input.model, &cancel).await?;
+                account = Some((auth.clone(), provider.account_id().to_owned()));
+                Arc::new(provider)
             } else {
+                let model = self
+                    .models
+                    .find(&input.model)
+                    .ok_or(AgentError::Configuration)?;
                 Arc::new(HttpProvider::resolve(model, |name| {
                     std::env::var(name).ok()
                 })?)
             };
-            let window = self.models.resolve_window(&input.model, None)?;
+            let window = self.registry()?.resolve_window(&input.model, None)?;
             let agent = Agent::new(
                 provider,
                 self.journal.clone(),
@@ -243,7 +388,13 @@ impl Backend for LocalBackend {
                     self.workspace.path(),
                 ))?)),
             )?;
-            agent
+            let stop = CancellationToken::new();
+            let monitor = account.map(|(auth, id)| {
+                let generation = cancel.clone();
+                let stop = stop.clone();
+                tokio::spawn(async move { auth.watch_account(id, generation, stop).await })
+            });
+            let result = agent
                 .generate(
                     GenerationInput {
                         session_id: input.session,
@@ -265,7 +416,12 @@ impl Backend for LocalBackend {
                     events,
                 )
                 .await
-                .map(|_| ())
+                .map(|_| ());
+            stop.cancel();
+            if let Some(monitor) = monitor {
+                let _ = monitor.await;
+            }
+            result
         })
     }
     fn undo(

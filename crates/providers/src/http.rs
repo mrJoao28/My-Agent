@@ -90,7 +90,7 @@ impl HttpProvider {
         }
         let base = match kind {
             ProviderKind::Anthropic => endpoints.anthropic,
-            ProviderKind::Openai => endpoints.openai,
+            ProviderKind::Openai | ProviderKind::Chatgpt => endpoints.openai,
             ProviderKind::Google => endpoints.google,
             ProviderKind::Ollama => format!(
                 "{}/chat/completions",
@@ -173,6 +173,9 @@ impl HttpProvider {
             }
         };
         let mut response = tokio::select! {biased;_=cancel.cancelled()=>return Err(AgentError::Cancelled),r=http.body(bytes).send()=>r.map_err(|_|AgentError::Network)?};
+        if self.kind == ProviderKind::Chatgpt && response.status().as_u16() == 403 {
+            return Err(AgentError::PlanPermission);
+        }
         if matches!(response.status().as_u16(), 401 | 403) {
             return Err(AgentError::Authentication);
         }
@@ -203,6 +206,23 @@ impl HttpProvider {
             let chunk = tokio::select! {biased;_=cancel.cancelled()=>return Err(AgentError::Cancelled),chunk=response.chunk()=>chunk.map_err(|_|AgentError::Network)?};
             let Some(chunk) = chunk else { break };
             for frame in decoder.push(&chunk)? {
+                if self.kind == ProviderKind::Chatgpt {
+                    let value: serde_json::Value =
+                        serde_json::from_str(&frame.data).unwrap_or_default();
+                    let code = value
+                        .pointer("/response/error/code")
+                        .or_else(|| value.pointer("/error/code"))
+                        .and_then(serde_json::Value::as_str);
+                    if matches!(
+                        code,
+                        Some(
+                            "subscription_sharing_usage_limit_exceeded"
+                                | "subscription_sharing_usage_unavailable"
+                        )
+                    ) {
+                        return Err(AgentError::PlanPermission);
+                    }
+                }
                 for event in parser.feed(&frame.data)? {
                     send(&events, &cancel, event).await?;
                 }

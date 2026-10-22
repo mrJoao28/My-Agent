@@ -210,14 +210,102 @@ fn windows_private(path: &Path, set: bool) -> io::Result<()> {
     }
     let sd = wrappers::GetNamedSecurityInfo(path.as_os_str(), SeObjectType::SE_FILE_OBJECT, info)
         .map_err(|e| io::Error::other(format!("read private ACL: {e}")))?;
-    let sddl = wrappers::ConvertSecurityDescriptorToStringSecurityDescriptor(&sd, info)
+    validate_windows_descriptor(&sd, &sid)
+}
+
+#[cfg(windows)]
+fn validate_windows_descriptor(
+    sd: &windows_permissions::SecurityDescriptor,
+    sid: &str,
+) -> io::Result<()> {
+    use windows_permissions::{
+        LocalBox, Sid,
+        constants::{AccessRights, AceType, SecurityInformation},
+        wrappers,
+    };
+    // Check protection before accessing the ACL: a NULL DACL grants everyone
+    // access, and the dependency's dacl() accessor cannot represent it safely.
+    let info = SecurityInformation::from_bits_truncate(5);
+    let sddl = wrappers::ConvertSecurityDescriptorToStringSecurityDescriptor(sd, info)
         .map_err(|e| io::Error::other(format!("encode private ACL: {e}")))?;
-    let value = sddl.to_str().unwrap_or("");
-    let valid = ["P", "PAI"]
-        .iter()
-        .any(|flags| value == format!("O:{sid}D:{flags}(A;;FA;;;{sid})"));
-    if !valid {
+    let flags = sddl
+        .to_str()
+        .and_then(|text| text.split_once("D:"))
+        .and_then(|(_, dacl)| dacl.split_once('('))
+        .map(|(flags, _)| flags);
+    if !matches!(flags, Some("P" | "PAI")) {
+        return Err(io::Error::other("credential ACL must be protected"));
+    }
+    let expected: LocalBox<Sid> = sid.parse().map_err(io::Error::other)?;
+    // Compare SID values, not their SDDL spelling: Windows can emit aliases
+    // such as SY/LS/NS/LA instead of the numeric SID returned by whoami.
+    let acl = sd
+        .dacl()
+        .ok_or_else(|| io::Error::other("missing private ACL"))?;
+    let ace = acl
+        .get_ace(0)
+        .ok_or_else(|| io::Error::other("empty private ACL"))?;
+    if sd.owner() != Some(&*expected)
+        || acl.len() != 1
+        || ace.ace_type() != AceType::ACCESS_ALLOWED_ACE_TYPE
+        || !ace.flags().is_empty()
+        || ace.mask() != AccessRights::FileAllAccess
+        || ace.sid() != Some(&*expected)
+    {
         return Err(io::Error::other("credential ACL must be owner-only"));
     }
     Ok(())
+}
+
+#[cfg(all(test, windows))]
+mod windows_tests {
+    use super::validate_windows_descriptor;
+    use windows_permissions::{
+        LocalBox, SecurityDescriptor, constants::SecurityInformation, wrappers,
+    };
+
+    #[test]
+    fn numeric_sids_and_sddl_aliases_have_the_same_private_permissions() {
+        for sid in ["S-1-5-18", "S-1-5-19", "S-1-5-20", "S-1-5-32-544"] {
+            for flags in ["P", "PAI"] {
+                let original = format!("O:{sid}D:{flags}(A;;FA;;;{sid})");
+                let sd: LocalBox<SecurityDescriptor> = original.parse().unwrap();
+                let canonical = wrappers::ConvertSecurityDescriptorToStringSecurityDescriptor(
+                    &sd,
+                    SecurityInformation::from_bits_truncate(5),
+                )
+                .unwrap();
+                assert_ne!(
+                    canonical.to_str().unwrap(),
+                    original,
+                    "fixture must reproduce SDDL alias normalization"
+                );
+                validate_windows_descriptor(&sd, sid).unwrap();
+            }
+        }
+        let administrator: LocalBox<SecurityDescriptor> = "O:LAD:P(A;;FA;;;LA)".parse().unwrap();
+        let numeric = administrator.owner().unwrap().to_string();
+        validate_windows_descriptor(&administrator, &numeric).unwrap();
+    }
+
+    #[test]
+    fn aliases_do_not_relax_owner_trustee_rights_or_inheritance_checks() {
+        for text in [
+            "O:LSD:P(A;;FA;;;SY)",
+            "O:SYD:P(A;;FA;;;LS)",
+            "O:SYD:P(A;;FA;;;SY)(A;;FR;;;WD)",
+            "O:SYD:(A;;FA;;;SY)",
+            "O:SYD:P",
+            "O:SYD:NO_ACCESS_CONTROL",
+            "O:SYD:P(A;;FR;;;SY)",
+            "O:SYD:P(D;;FA;;;SY)",
+            "O:SYD:P(A;OI;FA;;;SY)",
+        ] {
+            let sd: LocalBox<SecurityDescriptor> = text.parse().unwrap();
+            assert!(
+                validate_windows_descriptor(&sd, "S-1-5-18").is_err(),
+                "accepted unsafe fixture: {text}"
+            );
+        }
+    }
 }

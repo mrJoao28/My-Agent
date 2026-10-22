@@ -1,6 +1,6 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readFileSync, chmodSync, symlinkSync, lstatSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readFileSync, chmodSync, symlinkSync, lstatSync, rmSync, realpathSync } from 'node:fs';
 import { join, resolve, dirname, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn, spawnSync } from 'node:child_process';
@@ -76,7 +76,7 @@ test('launcher preserves argv, cwd, env, stdin/stdout/stderr and exit codes with
     assert.equal(result.status, code, result.stderr);
     const found = JSON.parse(result.stdout);
     assert.deepEqual(found.args, args);
-    assert.equal(found.cwd, f.dir);
+    assert.equal(realpathSync(found.cwd), realpathSync(f.dir));
     assert.equal(found.env, 'fictitious');
     assert.equal(found.input, 'stdin fixture');
     assert.equal(found.tty, false);

@@ -1508,3 +1508,15 @@ fmt, Clippy com warnings negados e Actionlint aprovados. Um teste Docker
 real continua ignorado. Não houve publicação npm local; o envio desta
 correção à main habilitada dispara os gates e a publicação no CI. A presença
 real no registry deve ser confirmada após o job publish, além do status verde.
+
+### Espera pela visibilidade no npm — 22/10/2026
+
+O run 39869877465 passou nos gates e enviou Windows 0.2.1. O publisher
+encerrou por falta de visibilidade pública após cerca de um minuto; a versão
+apareceu no registry depois desse limite. Ampliada a espera de 12 para 120
+consultas, com progresso e pausas de cinco segundos. A regressão simula
+visibilidade atrasada além do limite antigo nas seis versões, mantendo a
+ordem e a verificação de integridade. Ao retomar somente publish, a integridade
+do Windows foi aceita e o npm recusou Linux x64 com E404 de autorização.
+Esse bloqueio depende do cadastro privado do Trusted Publisher desse pacote;
+o principal permanece em 0.1.0 enquanto faltar uma plataforma autorizada.

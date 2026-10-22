@@ -158,3 +158,22 @@ test('publisher rejects missing tarballs, integrity conflicts and invisible plat
   await assert.rejects(release(items(), { lookup: async () => null, publish, attempts: 1 }), /main package remains blocked/);
   assert.equal(writes, 1);
 });
+test('publisher tolerates delayed visibility and keeps the main behind all platforms', async () => {
+  const waiting = new Map();
+  const writes = [];
+  await release(items(), {
+    lookup: async item => {
+      const state = waiting.get(item.key);
+      if (!state || state.remaining-- > 0) return null;
+      return item.integrity;
+    },
+    publish: async item => {
+      if (item.key === 'main') for (const p of platforms) assert.ok(waiting.get(p.key).remaining < 0);
+      writes.push(item.key);
+      waiting.set(item.key, { remaining: 20 });
+    },
+    pause: async () => {},
+  });
+  assert.equal(writes.length, 6);
+  assert.equal(writes.at(-1), 'main');
+});

@@ -328,3 +328,14 @@ pacotes. Ao repetir uma preparação sem alterações de código:
 Se houver mudanças de código na main desde a tag preparada, o cálculo SemVer
 normal gera uma nova versão. Trusted Publisher incorreto continua impedindo
 a escrita e precisa ser corrigido na conta npm.
+
+A publicação pode ser aceita antes de aparecer nas consultas públicas. O
+publisher agora faz até 120 consultas com pausas de cinco segundos entre elas
+(cerca de dez minutos, além do tempo HTTP), registrando progresso. O limite
+anterior de 12 consultas encerrou o run da 0.2.1 antes de o pacote Windows
+aparecer, embora o npm já tivesse aceitado o envio. A integridade continua
+obrigatória e o principal continua bloqueado até todas as plataformas estarem
+visíveis. Se uma plataforma for publicada e a próxima falhar com E404 de
+autorização, ajuste o Trusted Publisher **dessa próxima plataforma** e retome
+somente publish para preservar os mesmos artefatos. Cada pacote tem cadastro
+independente; autorizar somente Windows não autoriza Linux/macOS/principal.

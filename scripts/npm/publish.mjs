@@ -36,7 +36,7 @@ export async function lookup(item) {
     throw error;
   }
 }
-export async function release(items, { lookup, publish, pause = () => new Promise(r => setTimeout(r, 5000)), attempts = 12 }) {
+export async function release(items, { lookup, publish, pause = () => new Promise(r => setTimeout(r, 5000)), attempts = 120 }) {
   const keys = [...platforms.map(p => p.key), 'main'];
   assert.deepEqual(items.map(p => p.key).sort(), [...keys].sort(), 'all six tested tarballs required');
   const ordered = keys.map(key => items.find(p => p.key === key));
@@ -54,7 +54,10 @@ export async function release(items, { lookup, publish, pause = () => new Promis
         assert.equal(found, item.integrity, `${item.manifest.name}: registry integrity mismatch`);
         return;
       }
-      if (n + 1 < attempts) await pause();
+      if (n + 1 < attempts) {
+        if (n % 12 === 0) console.log(`Waiting for ${item.manifest.name}@${item.manifest.version} in the public registry (${n + 1}/${attempts})`);
+        await pause();
+      }
     }
     throw new Error(`${item.manifest.name}: version not visible; main package remains blocked`);
   };

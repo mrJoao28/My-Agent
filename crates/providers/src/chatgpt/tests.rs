@@ -72,6 +72,11 @@ impl Fixture {
             }
         });
         let dir = tempfile::tempdir().unwrap();
+        drop(
+            PrivateStore::new(dir.path())
+                .lock(&CancellationToken::new())
+                .expect("private OAuth fixture initialization"),
+        );
         let auth = ChatGpt::with_endpoints(
             dir.path(),
             Endpoints {

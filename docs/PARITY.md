@@ -1358,3 +1358,50 @@ Não houve build cruzado nem execução Rust Linux/macOS nesta entrega. A
 matriz configurada não é evidência de execução. Não houve publicação,
 criação/push de tag, commit, push, merge ou criação de branch. Arquivos novos
 foram incluídos somente com intenção de adição para permitir revisão do diff.
+
+### Correção dos gates Windows/macOS — 22/10/2026
+
+O [CI de main 39763260874](https://github.com/mrJoao28/My-Agent/actions/runs/39763260874)
+passou em Linux/macOS e falhou em Windows em oito testes OAuth, com
+AgentError::Persistence durante start_login. Compilação, formatação e Clippy
+Windows passaram; portanto, não foi uma falha de compilador Rust nesse run.
+
+A investigação reproduziu um defeito na validação de ACL: a comparação
+textual exigia o SID numérico de whoami, enquanto a serialização SDDL pode
+usar um alias para a mesma identidade, como SY, LS, NS ou LA. A documentação
+de [SID strings da Microsoft](https://learn.microsoft.com/en-us/windows/win32/secauthz/sid-strings)
+descreve as duas representações. Agora dono e destinatário da ACE são
+comparados pelo valor do SID. Continuam obrigatórios DACL protegida, uma
+única ACE de permissão, acesso total exclusivo desse SID e ausência de
+flags de herança. DACL nula/vazia é recusada antes do accessor da dependência,
+que pode entrar em panic para uma DACL nula.
+
+Regressões em memória cobrem aliases e SIDs numéricos, inclusive administrador
+local, e recusam dono/destinatário diferente, Everyone adicional, ACL sem
+proteção, nula/vazia, direitos incompletos, ACE de negação e herança. Nenhum
+arquivo real de credenciais ou proprietário de arquivo do sistema foi
+alterado. A fixture OAuth inicializa o armazenamento privado explicitamente
+para expor um eventual erro de infraestrutura com sua causa IO no teste,
+em vez de apenas Persistence. A mensagem de produção continua sanitizada.
+
+No [workflow de distribuição 39763188633](https://github.com/mrJoao28/My-Agent/actions/runs/39763188633),
+o gate Rust macOS passou, mas um teste Node falhou por comparar literalmente
+/var/folders/... com /private/var/folders/... . A asserção agora compara os
+caminhos físicos; o launcher não muda de cwd. Os dois testes POSIX de sinais
+passaram naquela execução anterior, sem que isso valide ainda esta revisão.
+
+Formatação, Clippy e os oito testes Node aplicáveis passaram localmente no
+Windows; dois testes POSIX foram ignorados e não contam como aprovados.
+A suíte Rust completa passou localmente no Windows: 219 testes aprovados,
+nenhuma falha e um teste Docker real ignorado, que não conta como aprovado.
+Comando: cargo test --locked --workspace -- --test-threads=1. Houve LNK1104
+local em executáveis antigos, distinto da falha de persistência do CI;
+a execução aprovada usou target/windows-acl-ci com símbolos/incremental
+desativados, sem alterar os perfis do projeto.
+
+O novo CI Windows/macOS ainda precisa executar esta revisão para confirmar
+o resultado nos runners originais. Os logs antigos não expõem a causa IO de
+Persistence; a correção do defeito de representação é comprovada por
+regressão local, mas a resolução daquele erro remoto depende dessa rodada.
+Nenhum gate foi removido, teste ignorado para contornar falha ou proteção
+de permissões relaxada. Sem commit, push, tag ou publicação desta revisão.

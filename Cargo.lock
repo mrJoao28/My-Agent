@@ -1118,7 +1118,7 @@ dependencies = [
 
 [[package]]
 name = "myagent-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "myagent-core",
@@ -1135,7 +1135,7 @@ dependencies = [
 
 [[package]]
 name = "myagent-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "myagent-protocol",
  "serde",
@@ -1147,14 +1147,14 @@ dependencies = [
 
 [[package]]
 name = "myagent-platform"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "myagent-protocol"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -1163,7 +1163,7 @@ dependencies = [
 
 [[package]]
 name = "myagent-providers"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
  "getrandom 0.4.3",
@@ -1185,7 +1185,7 @@ dependencies = [
 
 [[package]]
 name = "myagent-sandbox"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "thiserror",
  "tokio",
@@ -1194,7 +1194,7 @@ dependencies = [
 
 [[package]]
 name = "myagent-store"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "myagent-core",
  "myagent-platform",
@@ -1212,7 +1212,7 @@ dependencies = [
 
 [[package]]
 name = "myagent-tools"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
  "getrandom 0.4.3",
@@ -1241,7 +1241,7 @@ dependencies = [
 
 [[package]]
 name = "myagent-tui"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
  "crossterm",

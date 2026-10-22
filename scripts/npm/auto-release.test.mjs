@@ -58,7 +58,9 @@ test('release planning handles initial, numeric SemVer, features, breaking chang
     assert.equal(planRelease({ ...source, messages: [message] }).version, '1.0.0');
   }
   assert.equal(planRelease({ ...source, messages: ['Update app.rs'] }).version, '0.1.1');
-  assert.equal(planRelease({ ...source, files: ['README.md', 'docs/tui.md'] }), null);
+  assert.equal(planRelease({ ...source, files: ['README.md', 'docs/tui.md'], published: Array(6).fill('0.1.0') }), null);
+  assert.equal(planRelease({ ...source, files: ['README.md'] }).level, 'retry');
+  assert.equal(planRelease({ ...source, files: [], published: ['0.1.0'], messages: ['feat: docs only'] }).version, '0.1.1');
   assert.equal(planRelease({ ...source, files: ['npm/myagent/README.md'] }).version, '0.1.1');
   assert.equal(planRelease({ ...source, published: ['0.1.3'] }).version, '0.1.4');
   assert.equal(planRelease({ ...source, current: '0.3.0' }).version, '0.3.0');
@@ -75,6 +77,7 @@ test('registry discovery distinguishes absent packages from auth/network/malform
   assert.equal(planRelease({ current: '0.1.0', previous: '0.1.0', published: versions,
     files: ['crates/tui/src/app.rs'], messages: ['fix: login'] }).version, '0.1.4');
   assert.deepEqual(await packageVersions('fixture', async () => ({ stdout: '["0.1.0","0.2.0-beta.1","0.1.4"]' })), ['0.1.0', '0.1.4']);
+  assert.deepEqual(await packageVersions('fixture', async () => ({ stdout: '["0.1.0","0.1.0"]' })), ['0.1.0']);
   assert.deepEqual(await packageVersions('fixture', async () => { throw { stdout: '{"error":{"code":"E404"}}' }; }), []);
   for (const error of [{ stdout: '{"error":{"code":"E403"}}' }, { stdout: 'network E404' }, new Error('timeout')]) {
     await assert.rejects(packageVersions('fixture', async () => { throw error; }));
@@ -88,14 +91,36 @@ test('atomic release pins all manifests, skips docs, then prepares one feature v
   assert.equal(git(remote, 'rev-parse', 'refs/heads/main'), first.ref);
   assert.equal(git(remote, 'rev-parse', 'refs/tags/v0.1.0'), first.ref);
   commit(base, 'docs: explain fixture', 'README.md');
-  const docs = prepareRelease(base, ['0.1.0'], { push: true });
+  const docs = prepareRelease(base, Array(6).fill('0.1.0'), { push: true });
   assert.equal(docs.publish, false);
   commit(base, 'feat: another command');
   const next = prepareRelease(base, ['0.1.0'], { push: true });
   assert.equal(next.tag, 'v0.2.0');
   assert.equal(validate('v0.2.0', base), '0.2.0');
   assert.equal(git(remote, 'rev-parse', 'refs/heads/main'), next.ref);
-  assert.equal(prepareRelease(base, ['0.2.0']).publish, false);
+  assert.equal(prepareRelease(base, Array(6).fill('0.2.0')).publish, false);
+});
+test('an unpublished tag is retried at its original SHA without another commit or tag', () => {
+  const { base, remote } = fixture();
+  const first = prepareRelease(base, [], { push: true });
+  const head = commit(base, 'docs: explain retry', 'README.md');
+  const retry = prepareRelease(base, [], { push: true });
+  assert.equal(retry.publish, true);
+  assert.equal(retry.tag, first.tag);
+  assert.equal(retry.ref, first.ref);
+  assert.equal(git(base, 'rev-parse', 'HEAD'), head);
+  assert.equal(git(remote, 'rev-parse', 'refs/heads/main'), first.ref);
+  assert.equal(git(base, 'tag', '--list'), first.tag);
+  assert.equal(git(base, 'status', '--porcelain'), '');
+});
+test('a partially published tag gets a fresh patch while a complete release is a no-op', () => {
+  const { base, remote } = fixture();
+  prepareRelease(base, [], { push: true });
+  const next = prepareRelease(base, ['0.1.0'], { push: true });
+  assert.equal(next.tag, 'v0.1.1');
+  assert.equal(validate(next.tag, base), '0.1.1');
+  assert.equal(git(remote, 'rev-parse', 'refs/heads/main'), next.ref);
+  assert.equal(prepareRelease(base, Array(6).fill('0.1.1')).publish, false);
 });
 test('dirty worktrees and unrelated tag collisions stop before release writes', () => {
   const { base } = fixture();

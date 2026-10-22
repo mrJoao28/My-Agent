@@ -26,11 +26,19 @@ export function planRelease({ current, previous, published = [], files, messages
   parts(current);
   if (previous) parts(previous);
   for (const version of published) parts(version);
-  if (!files.some(releasePath)) return null;
-  // Unprefixed code changes still get a patch. Docs outside the packages do not.
-  const level = messages.some(m => /^[a-z]+(?:\([^\n)]+\))?!:/m.test(m) || /^BREAKING[ -]CHANGE:/m.test(m))
-    ? 'major' : messages.some(m => /^feat(?:\([^\n)]+\))?:/m.test(m)) ? 'minor' : 'patch';
+  const changed = files.some(releasePath);
   const floor = [current, previous, ...published].filter(Boolean).sort(compare).at(-1);
+  if (!changed) {
+    if (!previous) return null;
+    const publishedCount = published.filter(v => v === previous).length;
+    if (publishedCount === platforms.length + 1) return null;
+    // A prepared tag is not a published release. Rebuild it only when none of
+    // its packages exists; otherwise use a fresh patch to avoid byte conflicts.
+    if (publishedCount === 0 && floor === previous) return { version: previous, level: 'retry' };
+  }
+  // Unprefixed code changes still get a patch. Docs outside the packages do not.
+  const level = !changed ? 'patch' : messages.some(m => /^[a-z]+(?:\([^\n)]+\))?!:/m.test(m) || /^BREAKING[ -]CHANGE:/m.test(m))
+    ? 'major' : messages.some(m => /^feat(?:\([^\n)]+\))?:/m.test(m)) ? 'minor' : 'patch';
   if (!previous && published.length === 0) return { version: current, level: 'initial' };
   // A manually prepared version above every tag/published package is kept.
   if ([previous, ...published].filter(Boolean).every(v => compare(current, v) > 0)) {
@@ -57,7 +65,7 @@ export async function packageVersions(name, query = name => exec(process.execPat
     const { stdout } = await query(name);
     const value = JSON.parse(stdout);
     assert.ok(typeof value === 'string' || Array.isArray(value) && value.every(v => typeof v === 'string'), 'malformed registry versions');
-    return (Array.isArray(value) ? value : [value]).filter(v => stable.test(v));
+    return [...new Set((Array.isArray(value) ? value : [value]).filter(v => stable.test(v)))];
   } catch (error) {
     // Only a structured E404 means absent; authorization/network failures block.
     if (/"code"\s*:\s*"E404"/.test(error.stdout ?? '')) return [];
@@ -82,6 +90,10 @@ export function prepareRelease(base, published, { push = false } = {}) {
   const plan = planRelease({ current: validate(undefined, base), previous: previousTag?.slice(1), published, files, messages });
   if (!plan) return { publish: false, ref: source };
   const tag = `v${plan.version}`;
+  if (plan.level === 'retry') {
+    const ref = git(['rev-parse', `refs/tags/${tag}^{commit}`]);
+    return { publish: true, ref, tag, source };
+  }
   assert.equal(git(['tag', '--list', tag]), '', 'release tag already exists; never overwrite it');
   setVersion(plan.version, base);
   git(['add', 'Cargo.toml', 'Cargo.lock', 'npm/myagent/package.json', ...platforms.map(p => `npm/platforms/${p.key}/package.json`)]);
@@ -101,5 +113,5 @@ if (isMain(import.meta.url)) {
   const result = prepareRelease(root, await registryVersions(), { push: true });
   assert.ok(process.env.GITHUB_OUTPUT);
   for (const [key, value] of Object.entries(result)) appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
-  console.log(result.publish ? `Prepared ${result.tag}; publication still requires all quality/build/smoke gates.` : 'No package changes since the last release.');
+  console.log(result.publish ? `Prepared ${result.tag}; publication still requires all quality/build/smoke gates.` : 'No package changes; all six packages of the last release are already published.');
 }

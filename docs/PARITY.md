@@ -1486,3 +1486,25 @@ entrypoint comparava argv com a URL canônica do módulo, tratando /var e
 agora usa realpath, compartilhada pelos três scripts alterados. A regressão
 POSIX executa --set por um symlink de diretório, reproduzindo o problema também
 em Linux. A revisão deve passar novamente no CI antes de concluir a validação.
+
+### Recuperação de tag ainda não publicada — 22/10/2026
+
+A tentativa de publicar v0.2.0 criou sua tag e passou em todos os gates, mas
+o npm recusou o primeiro pacote com E404 de autorização. Repetir todos os
+jobs fez o prepare antigo considerar a tag existente como publicação completa,
+terminando verde com publish ignorado. A consulta pública ainda mostrava
+latest=0.1.0; a execução manual posterior era somente validação.
+
+O prepare agora consulta a presença da versão nos seis pacotes: sem nenhum
+publicado, retoma o SHA da tag sem novo commit/tag; com publicação parcial e
+sem artefatos originais, prepara uma versão patch nova; com os seis presentes,
+encerra sem publicação duplicada. Mudanças novas de código seguem o cálculo
+SemVer normal. O resumo de runs de validação explicita que não publicam.
+Regressões usam somente fixtures Git locais e registry simulado, incluindo
+retomada após documentação sem mudança de código e publicação parcial.
+
+Validação desta correção em Linux: 19 testes Node e 225 testes Rust aprovados,
+fmt, Clippy com warnings negados e Actionlint aprovados. Um teste Docker
+real continua ignorado. Não houve publicação npm local; o envio desta
+correção à main habilitada dispara os gates e a publicação no CI. A presença
+real no registry deve ser confirmada após o job publish, além do status verde.

@@ -303,4 +303,28 @@ preparada continua reservada. Corrigir código na main prepara a próxima
 versão; reexecutar somente jobs falhos conserva o mesmo SHA. Não reexecute
 todos os jobs depois de uma publicação parcial, pois recompilar pode alterar
 a integridade dos tarballs. Reexecução de prepare sem mudanças desde sua tag
-não publica novamente.
+não publica novamente quando os seis pacotes dessa versão já existem no npm.
+
+## Run verde com publish ignorado
+
+Status success do workflow não comprova publicação. Abra o job publish: ele
+precisa concluir como success, não skipped. A execução manual sem publish=true
+é somente validação, e seu resumo agora explicita isso. Confirme também
+`npm view @j2008/myagent dist-tags --json --registry=https://registry.npmjs.org/`.
+
+Prepare diferencia a tag criada da versão efetivamente publicada nos seis
+pacotes. Ao repetir uma preparação sem alterações de código:
+
+- Se nenhum dos seis pacotes dessa versão existe no npm, retoma o SHA da tag
+  e repete os gates/builds sem criar outra tag ou commit. Isso só permite
+  reconstrução porque nenhum byte dessa versão foi publicado.
+- Se apenas parte existe, prepara uma nova versão patch para os seis pacotes,
+  evitando reconstruir/sobrescrever bytes de uma versão parcialmente publicada.
+  Para preservar a versão parcial, prefira retomar apenas o publish com os
+  artefatos originais ainda disponíveis.
+- Se todos os seis existem, não publica novamente. Cada consulta mantém uma
+  ocorrência por versão/pacote; falha de rede/autorização não conta como ausência.
+
+Se houver mudanças de código na main desde a tag preparada, o cálculo SemVer
+normal gera uma nova versão. Trusted Publisher incorreto continua impedindo
+a escrita e precisa ser corrigido na conta npm.

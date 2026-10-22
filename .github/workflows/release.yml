@@ -1,0 +1,207 @@
+name: Distribuição npm
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.*'
+      - 'rust-toolchain.toml'
+      - 'crates/**'
+      - 'npm/**'
+      - 'scripts/npm/**'
+      - '.github/workflows/release.yml'
+      - 'LICENSE'
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm install --global npm@11.19.0
+      - run: node scripts/npm/version.mjs
+      - name: Conferir tag antes de qualquer publicação
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/npm/version.mjs "$RELEASE_TAG"
+      - id: matrix
+        name: Usar catálogo único de plataformas
+        run: |
+          node --input-type=module <<'JS'
+          import { platforms, binaryName } from './scripts/npm/common.mjs';
+          import { appendFileSync } from 'node:fs';
+          appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({include:platforms.map(p=>({...p,binary:binaryName(p.key)}))})}\n`);
+          JS
+      - run: node scripts/npm/pack.mjs main - release/main
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-main
+          path: |
+            release/main/*.tgz
+            release/main/receipt.json
+            release/main/SHA256SUMS
+          if-no-files-found: error
+
+  quality:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_INCREMENTAL: '0'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Instalar toolchain fixada
+        run: |
+          version=$(sed -n 's/^channel = "\([^"]*\)"/\1/p' rust-toolchain.toml)
+          test -n "$version"
+          rustup toolchain install "$version" --profile minimal --component rustfmt --component clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked --workspace -- --test-threads=1
+      - run: node --test scripts/npm/launcher.test.mjs
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      CARGO_INCREMENTAL: '0'
+      MACOSX_DEPLOYMENT_TARGET: '11.0'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm install --global npm@11.19.0
+      - name: Confirmar runner nativo
+        env:
+          EXPECTED_PLATFORM: ${{ matrix.key }}
+        run: node -e "if (process.platform+'-'+process.arch !== process.env.EXPECTED_PLATFORM) process.exit(1)"
+      - name: Instalar musl no Linux nativo
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+          echo 'CC=musl-gcc' >> "$GITHUB_ENV"
+      - name: Instalar toolchain fixada e target
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          version=$(sed -n 's/^channel = "\([^"]*\)"/\1/p' rust-toolchain.toml)
+          test -n "$version"
+          rustup toolchain install "$version" --profile minimal
+          rustup target add --toolchain "$version" "$TARGET"
+      - run: cargo build --locked --release -p myagent-cli --target '${{ matrix.target }}'
+      - name: Empacotar binário e conferir formato/arquitetura
+        run: node scripts/npm/pack.mjs '${{ matrix.key }}' 'target/${{ matrix.target }}/release/${{ matrix.binary }}' 'release/${{ matrix.key }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-${{ matrix.key }}
+          path: |
+            release/${{ matrix.key }}/*.tgz
+            release/${{ matrix.key }}/receipt.json
+            release/${{ matrix.key }}/SHA256SUMS
+          if-no-files-found: error
+
+  smoke:
+    needs: [validate, build]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm install --global npm@11.19.0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: npm-*
+          path: release
+      - name: Conferir conjunto completo antes dos testes
+        run: node scripts/npm/verify.mjs release --before-smoke
+      - name: Instalar tarballs inéditos por registry local e executar fora do checkout
+        run: node scripts/npm/smoke.mjs release '${{ matrix.key }}.smoke.json'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.key }}
+          path: '${{ matrix.key }}.smoke.json'
+          if-no-files-found: error
+
+  no-rust:
+    needs: [validate, build]
+    runs-on: ubuntu-24.04
+    container: node:24-bookworm-slim
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: npm-*
+          path: release
+      - name: Confirmar ausência de Rust na imagem
+        run: |
+          if command -v rustc || command -v cargo; then exit 1; fi
+          node scripts/npm/verify.mjs release --before-smoke
+          node scripts/npm/smoke.mjs release linux-container.smoke.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoke-linux-container
+          path: linux-container.smoke.json
+
+  publish:
+    needs: [validate, quality, smoke, no-rust]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@11.19.0
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+      - run: node scripts/npm/verify.mjs release
+      - name: Publicar plataformas, confirmar integridade/visibilidade e só então principal
+        run: node scripts/npm/publish.mjs --execute release

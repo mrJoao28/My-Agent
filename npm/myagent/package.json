@@ -1,0 +1,30 @@
+{
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrJoao28/My-Agent.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "name": "@j2008/myagent",
+  "description": "My-Agent: assistente de terminal em Rust.",
+  "bin": {
+    "myagent": "bin/myagent.js"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "files": [
+    "bin/myagent.js"
+  ],
+  "optionalDependencies": {
+    "@j2008/myagent-win32-x64": "0.1.0",
+    "@j2008/myagent-linux-x64": "0.1.0",
+    "@j2008/myagent-linux-arm64": "0.1.0",
+    "@j2008/myagent-darwin-arm64": "0.1.0",
+    "@j2008/myagent-darwin-x64": "0.1.0"
+  }
+}

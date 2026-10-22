@@ -1,5 +1,7 @@
 # Rust: versionar Cargo.lock para builds reproduzíveis do aplicativo.
 /target/
+/release/
+*.tgz
 /.cargo-cache/
 **/*.rs.bk
 

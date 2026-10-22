@@ -11,8 +11,8 @@ As bibliotecas incluem contratos, SQLite local e o núcleo de geração
 com providers Anthropic, OpenAI, Google e Ollama, além de 17 ferramentas
 locais de inspeção e nove ferramentas de alteração com aprovação e checkpoints.
 As bibliotecas também oferecem dois adapters web com aprovação por origem e
-três comandos exclusivamente em Docker. O diálogo de conta ChatGPT informa
-que sua autenticação será conectada no M7.
+três comandos exclusivamente em Docker. Contas ChatGPT usam OAuth separado
+das chaves OpenAI, com catálogo da conta ativa e escolha explícita do modelo.
 O tipo Mode prevê evolução, mas somente Plan e Build estão declarados.
 
 A arquitetura está aceita no [ADR 0001](docs/adr/0001-arquitetura.md): canais
@@ -27,6 +27,28 @@ Isolamento, runners e proteção SSRF estão em [Sandbox e web M5](docs/sandbox-
 Uso, teclado, temas e validação da interface estão em [TUI Grafite M6](docs/tui.md).
 As escolhas e alternativas estão justificadas no ADR.
 Consulte a [matriz de paridade](docs/PARITY.md) para comportamentos e testes a portar.
+
+## Instalação global
+
+Após a publicação autorizada no npm:
+
+```sh
+npm i -g @j2008/myagent
+myagent --version
+myagent doctor
+myagent
+```
+
+Requer Node.js >= 22.14.0; mantenha as dependências opcionais habilitadas.
+O Node apenas inicia o binário Rust correspondente: Windows x64, Linux
+x64/arm64 ou macOS x64/arm64. Não há postinstall, compilação ou download
+adicional na instalação. Rust e Bun não são necessários para executar.
+Docker permanece opcional para as ferramentas isoladas.
+
+O workflow e o checklist de publicação, Trusted Publishers, tarballs e
+recuperação de publicação parcial estão em [Distribuição npm M8](docs/npm-release.md).
+O suporte configurado na matriz não comprova execução local em cada sistema;
+consulte a evidência efetivamente executada em [PARITY](docs/PARITY.md).
 
 ## Desenvolvimento
 

@@ -62,7 +62,12 @@ test('version update keeps Rust, lockfile, six manifests and exact dependencies 
   }
   mkdirSync(join(dir, 'npm/myagent/bin'));
   copyFileSync(shim, join(dir, 'npm/myagent/bin/myagent.js'));
-  const result = spawnSync(process.execPath, [join(dir, 'scripts/npm/version.mjs'), '--set', '9.8.7'], { encoding: 'utf8', timeout: 15000 });
+  let entry = dir;
+  if (process.platform !== 'win32') {
+    entry = join(temporary('myagent version alias '), 'linked directory');
+    symlinkSync(dir, entry, 'dir');
+  }
+  const result = spawnSync(process.execPath, [join(entry, 'scripts/npm/version.mjs'), '--set', '9.8.7'], { encoding: 'utf8', timeout: 15000 });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(validate('v9.8.7', dir), '9.8.7');
   const main = join(dir, 'npm/myagent/package.json');

@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { platforms, validate, npmCli, run, root } from './common.mjs';
+import { platforms, validate, npmCli, run, root, isMain } from './common.mjs';
 import { verify } from './verify.mjs';
 import { assertAutoContext } from './auto-release.mjs';
 
@@ -69,7 +68,7 @@ export async function release(items, { lookup, publish, pause = () => new Promis
   if (!existing.get('main')) await publish(main);
   await confirm(main);
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const [mode, directory] = process.argv.slice(2);
   assert.ok(['--check', '--execute'].includes(mode) && directory, 'Usage: publish.mjs --check|--execute TARBALL_DIRECTORY');
   const version = validate();

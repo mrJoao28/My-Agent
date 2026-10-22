@@ -1,7 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { root, platforms, validate, json } from './common.mjs';
+import { join } from 'node:path';
+import { root, platforms, validate, json, isMain } from './common.mjs';
 
 export function setVersion(next, base = root) {
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(next)) throw new Error('Expected a stable SemVer');
@@ -19,7 +18,7 @@ export function setVersion(next, base = root) {
   }
   return validate(undefined, base);
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   if (args[0] === '--set') {
     if (args.length !== 2) throw new Error('Usage: version.mjs [vVERSION] | --set VERSION');

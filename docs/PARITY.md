@@ -1478,3 +1478,11 @@ environment, permissão de escrita do bot e variável de ativação exigem
 configuração externa conforme docs/npm-release.md. Não foram criadas tags
 remotas nem publicados pacotes durante a implementação. Nenhuma dependência
 foi adicionada; nenhum estado ou credencial real do usuário foi lido.
+
+Na primeira execução remota da automação, os testes novos passaram nos três
+sistemas, mas o teste existente de version.mjs falhou no macOS: o guard de
+entrypoint comparava argv com a URL canônica do módulo, tratando /var e
+/private/var como scripts diferentes e saindo sem executar --set. A comparação
+agora usa realpath, compartilhada pelos três scripts alterados. A regressão
+POSIX executa --set por um symlink de diretório, reproduzindo o problema também
+em Linux. A revisão deve passar novamente no CI antes de concluir a validação.

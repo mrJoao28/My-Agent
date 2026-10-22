@@ -6,6 +6,8 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+// Node resolves module URLs through symlinks; argv may retain /var or an alias.
+export const isMain = url => Boolean(process.argv[1] && realpathSync(resolve(process.argv[1])) === fileURLToPath(url));
 export const platforms = [
   { key: 'win32-x64', target: 'x86_64-pc-windows-msvc', runner: 'windows-2022' },
   { key: 'linux-x64', target: 'x86_64-unknown-linux-musl', runner: 'ubuntu-24.04' },

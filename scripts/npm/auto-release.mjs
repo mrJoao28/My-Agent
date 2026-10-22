@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
 import { appendFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { root, run, npmCli, platforms, validate } from './common.mjs';
+import { root, run, npmCli, platforms, validate, isMain } from './common.mjs';
 import { setVersion } from './version.mjs';
 
 const stable = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -95,7 +93,7 @@ export function prepareRelease(base, published, { push = false } = {}) {
   if (push) git(['push', '--atomic', 'origin', `${ref}:refs/heads/main`, `refs/tags/${tag}`]);
   return { publish: true, ref, tag, source };
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   assertAutoContext(process.env);
   // Fetch the latest main after acquiring the workflow's shared concurrency lock.
   run('git', ['fetch', 'origin', 'main', '--tags'], { cwd: root });

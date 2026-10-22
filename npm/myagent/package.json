@@ -1,5 +1,5 @@
 {
-  "version": "0.2.1",
+  "version": "0.2.2",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -21,10 +21,10 @@
     "bin/myagent.js"
   ],
   "optionalDependencies": {
-    "@j2008/myagent-win32-x64": "0.2.1",
-    "@j2008/myagent-linux-x64": "0.2.1",
-    "@j2008/myagent-linux-arm64": "0.2.1",
-    "@j2008/myagent-darwin-arm64": "0.2.1",
-    "@j2008/myagent-darwin-x64": "0.2.1"
+    "@j2008/myagent-win32-x64": "0.2.2",
+    "@j2008/myagent-linux-x64": "0.2.2",
+    "@j2008/myagent-linux-arm64": "0.2.2",
+    "@j2008/myagent-darwin-arm64": "0.2.2",
+    "@j2008/myagent-darwin-x64": "0.2.2"
   }
 }

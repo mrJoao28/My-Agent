@@ -1442,3 +1442,39 @@ login real, troca de tokens ou inferência. Navegador/clipboard reais no Ubuntu,
 Windows Terminal e macOS ainda exigem validação manual. O CI dos três sistemas
 deve validar esta revisão após o envio. Correção diretamente na main conforme
 autorização expressa do usuário; sem tag nem publicação npm.
+
+### Automação de versões e publicação npm — 22/10/2026
+
+Implementado o pedido de automatizar as atualizações do pacote a partir da
+main. O workflow release.yml agora aceita pushes de código na main, com
+ativação única por variável de repositório NPM_AUTO_RELEASE=true depois do
+cadastro npm. Sem ativação, o mesmo fluxo compila/testa sem publicar. PRs e
+workflow_dispatch com publish=false continuam sem escrita de versões/npm.
+
+O prepare consulta as versões dos seis pacotes, calcula SemVer pelo histórico,
+sincroniza Cargo.toml, Cargo.lock e seis manifests, e envia commit/tag de forma
+atômica. Usa somente GITHUB_TOKEN, sem PAT e sem force push. A versão é
+preparada antes dos builds; tags preparadas não comprovam publicação. Todos
+os jobs usam o SHA fixado, e publicação só acontece após qualidade nos três
+sistemas, cinco builds nativos e os smokes já existentes, incluindo container
+sem Rust. O GitHub Release é registrado apenas depois da confirmação no npm.
+Filas serializam releases; guardas recusam forks, PRs, workflow/ref incorretos,
+checkout diferente da tag e automação desativada. O publisher mantém a
+integridade e a ordem plataformas → principal, inclusive em recuperação.
+
+Testes locais Linux: 17 testes Node aprovados (sete novos), fmt e Clippy com
+warnings negados aprovados, 225 testes Rust aprovados e um Docker real
+ignorado. Actionlint 1.7.12 validou os dois workflows. As fixtures Git locais
+com caminhos com espaços verificaram commit/tag atômicos, documentação sem
+release, sincronização de versões, tag ocupada e conflito concorrente sem
+tag remota parcial. Registry e publicação foram simulados, sem npm publish.
+Corrigida também a fixture POSIX do launcher: chmod de um symlink tentava
+alterar o executável compartilhado do Node, causando EPERM neste ambiente.
+Agora a fixture usa o symlink sem alterar o destino.
+
+O CI inclui os testes Node nos três sistemas. A execução remota desta revisão
+deve confirmar os resultados nos runners; cadastro Trusted Publisher,
+environment, permissão de escrita do bot e variável de ativação exigem
+configuração externa conforme docs/npm-release.md. Não foram criadas tags
+remotas nem publicados pacotes durante a implementação. Nenhuma dependência
+foi adicionada; nenhum estado ou credencial real do usuário foi lido.

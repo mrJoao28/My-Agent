@@ -47,6 +47,10 @@ Docker permanece opcional para as ferramentas isoladas.
 
 O workflow e o checklist de publicação, Trusted Publishers, tarballs e
 recuperação de publicação parcial estão em [Distribuição npm M8](docs/npm-release.md).
+A publicação automática após alterações na main pode ser ativada uma única
+vez com Trusted Publishers e a variável `NPM_AUTO_RELEASE=true`, conforme o
+guia. Sem essa ativação, a main apenas testa os pacotes. Para atualizar uma
+instalação existente: `npm i -g @j2008/myagent@latest`.
 O suporte configurado na matriz não comprova execução local em cada sistema;
 consulte a evidência efetivamente executada em [PARITY](docs/PARITY.md).
 

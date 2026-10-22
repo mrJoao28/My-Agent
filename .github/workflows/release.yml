@@ -11,29 +11,100 @@ on:
       - '.github/workflows/release.yml'
       - 'LICENSE'
   push:
+    branches: [main]
     tags: ['v*']
+    paths:
+      - 'Cargo.*'
+      - 'rust-toolchain.toml'
+      - 'crates/**'
+      - 'npm/**'
+      - 'scripts/npm/**'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/ci.yml'
+      - 'LICENSE'
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Preparar e publicar uma release (exige NPM_AUTO_RELEASE=true)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: npm-${{ github.ref }}
+  group: npm-${{ github.event_name == 'pull_request' && github.ref || 'release' }}
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    # A single activation switch, after npm/environment setup. PRs never write.
+    if: >-
+      github.repository == 'mrJoao28/My-Agent' &&
+      github.ref == 'refs/heads/main' &&
+      vars.NPM_AUTO_RELEASE == 'true' &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      ref: ${{ steps.release.outputs.ref }}
+      tag: ${{ steps.release.outputs.tag }}
+      publish: ${{ steps.release.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Testar a preparação antes de alterar versões/tags
+        run: node --test scripts/npm/auto-release.test.mjs
+      - id: release
+        name: Sincronizar versão e enviar commit/tag atomicamente
+        env:
+          NPM_AUTO_RELEASE: ${{ vars.NPM_AUTO_RELEASE }}
+          REQUEST_PUBLISH: ${{ inputs.publish || false }}
+        run: node scripts/npm/auto-release.mjs
+
   validate:
+    needs: prepare
+    if: >-
+      always() && !cancelled() &&
+      (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') &&
+      (needs.prepare.outputs.publish == 'true' || github.event_name == 'pull_request' ||
+       startsWith(github.ref, 'refs/tags/v') ||
+       (github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.NPM_AUTO_RELEASE != 'true') ||
+       (github.event_name == 'workflow_dispatch' && !inputs.publish))
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      ref: ${{ steps.target.outputs.ref }}
+      tag: ${{ steps.target.outputs.tag }}
+      publish: ${{ needs.prepare.outputs.publish == 'true' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+      auto: ${{ needs.prepare.outputs.publish == 'true' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
           package-manager-cache: false
       - run: npm install --global npm@11.19.0
       - run: node scripts/npm/version.mjs
+      - id: target
+        name: Fixar SHA e tag usados por todos os jobs
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import { validate, run } from './scripts/npm/common.mjs';
+          import { appendFileSync } from 'node:fs';
+          appendFileSync(process.env.GITHUB_OUTPUT, `ref=${run('git', ['rev-parse', 'HEAD']).trim()}\ntag=v${validate()}\n`);
+          JS
       - name: Conferir tag antes de qualquer publicação
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -59,6 +130,7 @@ jobs:
 
   quality:
     needs: validate
+    if: ${{ !cancelled() && needs.validate.result == 'success' }}
     strategy:
       fail-fast: false
       matrix:
@@ -73,6 +145,9 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -85,10 +160,11 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked --workspace -- --test-threads=1
-      - run: node --test scripts/npm/launcher.test.mjs
+      - run: node --test scripts/npm/launcher.test.mjs scripts/npm/auto-release.test.mjs
 
   build:
     needs: validate
+    if: ${{ !cancelled() && needs.validate.result == 'success' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
@@ -101,6 +177,9 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -138,12 +217,16 @@ jobs:
 
   smoke:
     needs: [validate, build]
+    if: ${{ !cancelled() && needs.validate.result == 'success' && needs.build.result == 'success' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -165,10 +248,13 @@ jobs:
 
   no-rust:
     needs: [validate, build]
+    if: ${{ !cancelled() && needs.validate.result == 'success' && needs.build.result == 'success' }}
     runs-on: ubuntu-24.04
     container: node:24-bookworm-slim
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.ref }}
       - uses: actions/download-artifact@v4
         with:
           pattern: npm-*
@@ -185,7 +271,10 @@ jobs:
 
   publish:
     needs: [validate, quality, smoke, no-rust]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      !cancelled() && needs.validate.result == 'success' &&
+      needs.quality.result == 'success' && needs.smoke.result == 'success' &&
+      needs.no-rust.result == 'success' && needs.validate.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     environment: npm-release
     permissions:
@@ -193,6 +282,9 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -204,4 +296,32 @@ jobs:
           path: release
       - run: node scripts/npm/verify.mjs release
       - name: Publicar plataformas, confirmar integridade/visibilidade e só então principal
+        env:
+          AUTO_RELEASE: ${{ needs.validate.outputs.auto }}
+          NPM_AUTO_RELEASE: ${{ vars.NPM_AUTO_RELEASE }}
+          REQUEST_PUBLISH: ${{ inputs.publish || false }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+          RELEASE_SHA: ${{ needs.validate.outputs.ref }}
         run: node scripts/npm/publish.mjs --execute release
+
+  github-release:
+    needs: [validate, publish]
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Registrar release após confirmar todos os pacotes no npm
+        uses: actions/github-script@v7
+        env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        with:
+          script: |
+            const tag = process.env.RELEASE_TAG;
+            if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag)) throw new Error('Invalid release tag');
+            try {
+              await github.rest.repos.getReleaseByTag({...context.repo, tag});
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.repos.createRelease({...context.repo, tag_name: tag, name: tag, generate_release_notes: true});
+            }

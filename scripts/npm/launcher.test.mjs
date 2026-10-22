@@ -36,9 +36,13 @@ function fixture(binary = true, version = validate()) {
   if (binary) {
     const path = join(native, 'bin', process.platform === 'win32' ? 'myagent.exe' : 'myagent');
     // Node is only a deterministic child fixture here, never a release binary.
-    if (process.platform === 'win32') copyFileSync(process.execPath, path);
-    else symlinkSync(process.execPath, path);
-    chmodSync(path, 0o755);
+    if (process.platform === 'win32') {
+      copyFileSync(process.execPath, path);
+      chmodSync(path, 0o755);
+    } else {
+      // chmod follows symlinks: never change the shared Node executable.
+      symlinkSync(process.execPath, path);
+    }
   }
   return { dir, entry: join(dir, 'bin/myagent.js') };
 }

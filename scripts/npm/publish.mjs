@@ -3,11 +3,28 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { platforms, validate, npmCli } from './common.mjs';
+import { platforms, validate, npmCli, run, root } from './common.mjs';
 import { verify } from './verify.mjs';
+import { assertAutoContext } from './auto-release.mjs';
 
 const exec = promisify(execFile);
 const publicRegistry = 'https://registry.npmjs.org/';
+export function assertPublishContext(env, version, head, tagged) {
+  assert.equal(env.GITHUB_ACTIONS, 'true');
+  assert.equal(env.GITHUB_REPOSITORY, 'mrJoao28/My-Agent');
+  assert.equal(env.RELEASE_TAG, `v${version}`);
+  assert.match(env.RELEASE_SHA ?? '', /^[a-f0-9]{40}$/);
+  assert.equal(head, env.RELEASE_SHA, 'checkout must match the tested release SHA');
+  assert.equal(tagged, head, 'tag must point to the tested checkout');
+  if (env.AUTO_RELEASE === 'true') {
+    assertAutoContext(env);
+  } else {
+    assert.equal(env.GITHUB_EVENT_NAME, 'push');
+    assert.equal(env.GITHUB_REF, `refs/tags/v${version}`);
+    assert.equal(env.GITHUB_WORKFLOW_REF, `mrJoao28/My-Agent/.github/workflows/release.yml@refs/tags/v${version}`);
+  }
+  assert.ok(env.ACTIONS_ID_TOKEN_REQUEST_URL, 'OIDC permission required');
+}
 export async function lookup(item) {
   try {
     const { stdout } = await exec(process.execPath, [npmCli(), 'view', `${item.manifest.name}@${item.manifest.version}`, 'dist.integrity', '--json', '--registry', publicRegistry, '--fetch-retries=0'], { timeout: 30000 });
@@ -58,13 +75,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const version = validate();
   const items = verify(resolve(directory));
   if (mode === '--execute') {
-    validate(process.env.GITHUB_REF_NAME);
-    assert.equal(process.env.GITHUB_ACTIONS, 'true');
-    assert.equal(process.env.GITHUB_EVENT_NAME, 'push');
-    assert.equal(process.env.GITHUB_REPOSITORY, 'mrJoao28/My-Agent');
-    assert.equal(process.env.GITHUB_REF, `refs/tags/v${version}`);
-    assert.equal(process.env.GITHUB_WORKFLOW_REF, `mrJoao28/My-Agent/.github/workflows/release.yml@refs/tags/v${version}`);
-    assert.ok(process.env.ACTIONS_ID_TOKEN_REQUEST_URL, 'OIDC permission required');
+    validate(process.env.RELEASE_TAG);
+    assertPublishContext(process.env, version,
+      run('git', ['rev-parse', 'HEAD'], { cwd: root }).trim(),
+      run('git', ['rev-parse', `refs/tags/v${version}^{commit}`], { cwd: root }).trim());
     const tool = (await exec(process.execPath, [npmCli(), '--version'])).stdout.trim().split('.').map(Number);
     assert.ok(tool[0] > 11 || tool[0] === 11 && (tool[1] > 5 || tool[1] === 5 && tool[2] >= 1), 'Trusted Publishers requires npm >= 11.5.1');
     await release(items, { lookup, publish: async item => {

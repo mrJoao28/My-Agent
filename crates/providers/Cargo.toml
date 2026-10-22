@@ -16,12 +16,19 @@ serde_json.workspace = true
 myagent-core.workspace = true
 myagent-protocol.workspace = true
 myagent-platform.workspace = true
+myagent-store.workspace = true
+sha2 = "0.10"
+base64 = "0.22"
+getrandom = "0.4"
+jsonwebtoken = { version = "10", default-features = false, features = ["rust_crypto"] }
 
 [lints]
 workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+rsa = "0.9"
+rand = "0.8"
 
 [target.'cfg(windows)'.dependencies]
 winapi-util = "0.1"

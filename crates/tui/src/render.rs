@@ -552,14 +552,31 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         let inner = block.inner(rect);
         frame.render_widget(block, rect);
         let rows = Layout::vertical([
-            Constraint::Length(2),
+            Constraint::Length(
+                if dialog.kind == crate::dialog::DialogKind::ChatGpt && !dialog.choices.is_empty() {
+                    4
+                } else {
+                    2
+                },
+            ),
             Constraint::Min(1),
             Constraint::Length(1),
         ])
         .split(inner);
         frame.render_widget(
-            Paragraph::new(format!("Buscar: {}", crate::safe_text(&dialog.query)))
-                .style(Style::default().fg(p.muted)),
+            Paragraph::new(
+                if dialog.kind == crate::dialog::DialogKind::ChatGpt && !dialog.choices.is_empty() {
+                    format!(
+                        "{}\nBuscar: {}",
+                        dialog.note,
+                        crate::safe_text(&dialog.query)
+                    )
+                } else {
+                    format!("Buscar: {}", crate::safe_text(&dialog.query))
+                },
+            )
+            .style(Style::default().fg(p.muted))
+            .wrap(Wrap { trim: false }),
             rows[0],
         );
         let filtered = dialog.filtered();

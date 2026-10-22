@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 //! Codecs HTTP/SSE; nenhum SDK pode executar ferramentas.
+pub mod chatgpt;
 mod http;
 pub mod registry;
 pub mod sse;

@@ -1,6 +1,6 @@
 use crate::{
     app::{Action, App, Screen},
-    ports::{Backend, SessionView},
+    ports::{AccountView, Backend, ModelChoice, SessionView},
     preferences::Preferences,
     render,
 };
@@ -13,6 +13,9 @@ enum UiEvent {
     Stream(StreamEvent),
     Loaded(Box<SessionView>, Screen, bool),
     Sessions(Vec<Session>),
+    Models(Vec<ModelChoice>),
+    Account(u64, Result<(AccountView, Vec<ModelChoice>)>),
+    LoginUrl(u64, String),
     Finished {
         view: Option<Box<SessionView>>,
         error: Option<String>,
@@ -26,6 +29,7 @@ enum UiEvent {
 }
 fn error_message(error: myagent_core::AgentError) -> String {
     match error {
+        myagent_core::AgentError::PlanPermission => "Uso do plano indisponível. Escolha reautorizar em /chatgpt ou selecionar outro modelo em /models. Nenhuma troca automática foi feita.".into(),
         myagent_core::AgentError::Authentication => {
             "Chave ausente ou recusada. Selecione um modelo configurado em /models.".into()
         }
@@ -38,6 +42,7 @@ struct Driver<'a> {
     backend: Arc<dyn Backend>,
     sender: mpsc::Sender<UiEvent>,
     cancel: Option<CancellationToken>,
+    account_epoch: u64,
     shutdown: CancellationToken,
     jobs: Vec<JoinHandle<()>>,
 }
@@ -45,6 +50,51 @@ impl Driver<'_> {
     fn action(&mut self, action: Action, app: &mut App) -> bool {
         match action {
             Action::Quit => return false,
+            Action::CancelLogin => {
+                self.account_epoch = self.account_epoch.wrapping_add(1);
+                if let Some(cancel) = self.cancel.take() {
+                    cancel.cancel();
+                }
+            }
+            Action::RefreshModels => {
+                let backend = self.backend.clone();
+                let sender = self.sender.clone();
+                let token = self.shutdown.child_token();
+                self.jobs.push(self.runtime.spawn(async move {
+                    send_result(
+                        &sender,
+                        backend.refresh_models(token).await.map(UiEvent::Models),
+                    )
+                    .await;
+                }));
+            }
+            Action::Account(op) => {
+                self.account_epoch = self.account_epoch.wrapping_add(1);
+                let epoch = self.account_epoch;
+                let backend = self.backend.clone();
+                let sender = self.sender.clone();
+                let token = self.shutdown.child_token();
+                self.cancel = Some(token.clone());
+                self.jobs.push(self.runtime.spawn(async move {
+                    let (urls, mut receiver) = mpsc::channel(1);
+                    let task = {
+                        let backend = backend.clone();
+                        tokio::spawn(async move { backend.account(op, token, urls).await })
+                    };
+                    while let Some(url) = receiver.recv().await {
+                        if sender.send(UiEvent::LoginUrl(epoch, url)).await.is_err() {
+                            break;
+                        }
+                    }
+                    let result = task.await.unwrap_or(Err(myagent_core::AgentError::Cleanup));
+                    let _ = sender
+                        .send(UiEvent::Account(
+                            epoch,
+                            result.map(|view| (view, backend.models())),
+                        ))
+                        .await;
+                }));
+            }
             Action::Cancel => {
                 if let Some(cancel) = &self.cancel {
                     cancel.cancel();
@@ -191,6 +241,7 @@ pub fn run(
         backend,
         sender,
         cancel: None,
+        account_epoch: 0,
         shutdown: shutdown.clone(),
         jobs: vec![],
     };
@@ -204,6 +255,44 @@ pub fn run(
                     UiEvent::Stream(event) => app.stream(event),
                     UiEvent::Loaded(view, screen, resume) => app.load(*view, screen, resume),
                     UiEvent::Sessions(sessions) => app.sessions(sessions),
+                    UiEvent::Account(epoch, result) => {
+                        if epoch == driver.account_epoch {
+                            driver.cancel = None;
+                            app.loading = false;
+                            match result {
+                                Ok((view, models)) => {
+                                    app.models = models;
+                                    app.account_view(view);
+                                }
+                                Err(error) => app.notify(error_message(error), true),
+                            }
+                        }
+                    }
+                    UiEvent::LoginUrl(epoch, url) => {
+                        if epoch == driver.account_epoch
+                            && let Some(dialog) = &mut app.dialog
+                            && dialog.kind == crate::dialog::DialogKind::ChatGpt
+                        {
+                            dialog.note = format!(
+                                "Abra no navegador para continuar com ChatGPT:\n{url}\nEsc cancela o login."
+                            );
+                        }
+                    }
+                    UiEvent::Models(models) => {
+                        app.models = models;
+                        if let Some(dialog) = &mut app.dialog
+                            && dialog.kind == crate::dialog::DialogKind::Models
+                        {
+                            dialog.choices = app
+                                .models
+                                .iter()
+                                .map(|model| crate::dialog::Choice {
+                                    id: model.id.clone(),
+                                    label: model.label.clone(),
+                                })
+                                .collect();
+                        }
+                    }
                     UiEvent::Finished { view, error } => {
                         app.finish(view.map(|view| *view), error);
                         driver.cancel = None;

@@ -2,7 +2,7 @@ use crate::{
     approval::{Approval, Decision},
     dialog::{Choice, Dialog, DialogKind},
     input::Input,
-    ports::{ModelChoice, SessionView, Submission},
+    ports::{AccountOperation, AccountView, ModelChoice, SessionView, Submission},
     preview::CodeStatus,
     theme::Theme,
     transcript::{Speaker, Transcript},
@@ -22,6 +22,9 @@ pub enum Action {
     Cancel,
     Approve { id: String, decision: Decision },
     Sessions,
+    RefreshModels,
+    Account(AccountOperation),
+    CancelLogin,
     NewSession,
     LoadSession(String),
     Undo(String),
@@ -128,6 +131,20 @@ impl App {
             error,
             ticks: 140,
         });
+    }
+    pub fn account_view(&mut self, view: AccountView) {
+        self.loading = false;
+        if let Some(dialog) = &mut self.dialog
+            && dialog.kind == DialogKind::ChatGpt
+        {
+            dialog.choices = view
+                .choices
+                .into_iter()
+                .map(|(id, label)| Choice { id, label })
+                .collect();
+            dialog.note = view.note;
+            dialog.selected = 0;
+        }
     }
     pub fn tokens(&self) -> u64 {
         self.measured
@@ -330,7 +347,10 @@ impl App {
         if self.busy()
             && matches!(
                 kind,
-                DialogKind::Models | DialogKind::Sessions | DialogKind::Agents
+                DialogKind::Models
+                    | DialogKind::Sessions
+                    | DialogKind::Agents
+                    | DialogKind::ChatGpt
             )
         {
             self.notify(
@@ -387,7 +407,8 @@ impl App {
         };
         let mut dialog = Dialog::new(kind, title, choices);
         if kind == DialogKind::ChatGpt {
-            dialog.note="A autenticação de conta ChatGPT será conectada no Milestone 7.\nNenhuma conta está conectada nesta versão.\nOs providers de API e Ollama podem ser selecionados em /models.".into();
+            dialog.note = "Carregando contas ChatGPT...".into();
+            self.loading = true;
         }
         if kind == DialogKind::Sessions {
             dialog.note = "Carregando sessões...".into();
@@ -396,6 +417,10 @@ impl App {
         self.dialog = Some(dialog);
         if kind == DialogKind::Sessions {
             vec![Action::Sessions]
+        } else if kind == DialogKind::ChatGpt {
+            vec![Action::Account(AccountOperation::Status)]
+        } else if kind == DialogKind::Models {
+            vec![Action::RefreshModels]
         } else {
             vec![]
         }
@@ -519,7 +544,15 @@ impl App {
         let interrupt = key.code == KeyCode::Esc || (control && key.code == KeyCode::Char('c'));
         if let Some(dialog) = &mut self.dialog {
             if interrupt {
+                let login = dialog.kind == DialogKind::ChatGpt && self.loading;
                 self.dialog = None;
+                if login {
+                    self.loading = false;
+                    return vec![Action::CancelLogin];
+                }
+                return vec![];
+            }
+            if dialog.kind == DialogKind::ChatGpt && self.loading {
                 return vec![];
             }
             match key.code {
@@ -560,6 +593,25 @@ impl App {
                             DialogKind::Sessions => {
                                 self.loading = true;
                                 return vec![Action::LoadSession(id)];
+                            }
+                            DialogKind::ChatGpt => {
+                                let op = if id == "login" {
+                                    AccountOperation::Login(None)
+                                } else if let Some(id) = id.strip_prefix("login:") {
+                                    AccountOperation::Login(Some(id.into()))
+                                } else if let Some(id) = id.strip_prefix("activate:") {
+                                    AccountOperation::Activate(id.into())
+                                } else if let Some(id) = id.strip_prefix("logout:") {
+                                    AccountOperation::Logout(id.into())
+                                } else if id == "models" {
+                                    return self.open(DialogKind::Models);
+                                } else {
+                                    return vec![];
+                                };
+                                self.dialog =
+                                    Some(Dialog::new(DialogKind::ChatGpt, "Conta ChatGPT", vec![]));
+                                self.loading = true;
+                                return vec![Action::Account(op)];
                             }
                             DialogKind::Resume if id == "resume" => return self.submit(true),
                             _ => {}

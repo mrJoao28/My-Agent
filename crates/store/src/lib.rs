@@ -7,6 +7,7 @@
 mod config;
 mod journal;
 mod migrations;
+pub mod private;
 mod records;
 mod services;
 pub use journal::StoreJournal;

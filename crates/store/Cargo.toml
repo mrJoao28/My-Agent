@@ -16,6 +16,7 @@ rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+tempfile.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }
@@ -23,6 +24,10 @@ tempfile.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 winapi-util = "0.1"
+windows-permissions = "0.2.4"
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["process"] }
 
 [lints]
 workspace = true

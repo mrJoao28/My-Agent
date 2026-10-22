@@ -122,7 +122,7 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | AI-02 | OpenAI | Adapter OpenAI e opções de reasoning por modelo; resolução explícita, falha por modelo/chave ausente. | `S/lib/providers/openai.ts`, `S/lib/providers/resolver.ts` | feito | `S/lib/config.test.ts`, `S/services/stream-service.test.ts`, `M/exec.test.ts` (provider simulado); sem chamada real validada |
 | AI-03 | Google | Adapter Google com thinkingBudget por modelo, catálogo e chave por modelo. | `S/lib/providers/google.ts`, `S/lib/providers/resolver.ts` | feito | `S/lib/config.test.ts`, `S/services/context-plan.test.ts`; sem teste dedicado do adapter Google identificado |
 | AI-04 | Ollama | Endpoint compatível com OpenAI Chat Completions, URL/chave opcionais, modelos locais/customizados e janela configurável; não exige chave cloud. | `S/lib/providers/ollama.ts`, `S/lib/providers/resolver.ts` | feito | `S/lib/config.test.ts`, `S/lib/model-context.test.ts`; sem inferência Ollama real validada |
-| AI-05 | Plano ChatGPT | Login habilitado por padrão, desativação explícita; OAuth com PKCE, callback loopback, state/nonce, identidade assinada e registro de cliente; múltiplas contas, ativação/logout/revogação. | `S/lib/chatgpt.ts`, `S/lib/chatgpt-store.ts`, `S/routes/chatgpt.ts`, `C/dialogs/chatgpt-dialog.tsx` | pendente | `S/lib/chatgpt.test.ts` |
+| AI-05 | Plano ChatGPT | Login habilitado por padrão, desativação explícita; OAuth com PKCE, callback loopback, state/nonce, identidade assinada e registro de cliente; múltiplas contas, ativação/logout/revogação. | `S/lib/chatgpt.ts`, `S/lib/chatgpt-store.ts`, `S/routes/chatgpt.ts`, `C/dialogs/chatgpt-dialog.tsx` | em andamento | Implementação Rust e testes OAuth/JWKS fictícios em `crates/providers/src/chatgpt/tests.rs`; detalhes e limites na integração de 21/10/2026 abaixo. `S/lib/chatgpt.test.ts` é referência histórica. |
 | AI-06 | Credenciais ChatGPT | Armazenamento privado/atômico, refresh serializado e cancelável; troca de conta interrompe geração; falha de grant invalida apenas conta afetada; não fallback para API key nem retry automático de inferência. Nenhum arquivo real de credenciais foi aberto. | `S/lib/chatgpt.ts`, `S/lib/chatgpt-store.ts`, `S/lib/providers/chatgpt.ts` | pendente | `S/lib/chatgpt.test.ts`, `S/lib/providers/chatgpt.test.ts` |
 | AI-07 | Stream ChatGPT | Modelos descobertos por conta com IDs chatgpt:, instruções developer e tools no namespace do provider; validação de conclusão SSE, UTF-8 fragmentado e respostas JSON/HTML/incompletas/oversized com erros sanitizados. | `S/lib/providers/chatgpt.ts`, `S/lib/providers/chatgpt-stream.ts`, `S/lib/chatgpt.ts` | pendente | `S/lib/providers/chatgpt.test.ts`, `S/lib/chatgpt.test.ts` |
 | MODEL-01 | Registry | Catálogo compartilhado de IDs/provider/pricing/contexto, default claude-opus-4-6; adição de modelos customizados, detecção de configuração e rejeição de duplicatas/IDs ChatGPT manuais. | `H/models.ts`, `S/lib/model-registry.ts`, `S/lib/model-config.ts`, `S/routes/models.ts` | em andamento | `H/schemas.test.ts`, `S/lib/config.test.ts`, `S/lib/model-context.test.ts`, `S/lib/private-config.test.ts`, `C/dialogs/models-dialog.test.tsx` |
@@ -134,8 +134,8 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | --- | --- | --- | --- | --- | --- |
 | CLI-01 | Entrada | `myagent` retoma última sessão do workspace ou cria; `--new` força nova; launcher integra backend em porta livre e CUI com token efêmero; SIGINT/SIGTERM e cleanup. Bun/Node são detalhes do legado a substituir. | `M/cli.ts`, `packages/myagent/bin/myagent.js`, `S/index.ts`, `C/index.tsx` | em andamento | `M/launcher.test.ts`, `M/options.test.ts`, `S/launcher.test.ts`, `scripts/workspace-lock.test.ts` |
 | CLI-02 | Resume | `resume` escolhe sessão da pasta, `resume --all` permite outras pastas e troca workspace; seleção/aborto e validação. | `M/resume.ts`, `M/options.ts`, `S/services/workspace-sessions.ts` | pendente | `M/options.test.ts`, `S/services/workspace-sessions.test.ts`; sem teste dedicado da seleção interativa em resume.ts identificado |
-| CLI-03 | Doctor | Diagnóstico de runtime, diretório gravável, SQLite/migrations, Docker/imagem, ferramentas detectadas versus imagem e configuração de modelos sem valores de chaves. O doctor legado pode escrever/migrar: não foi executado nesta inspeção. | `M/doctor.ts`, `M/doctor-tools.ts` | pendente | `M/doctor-tools.test.ts`, `S/security/docker-availability.test.ts`; sem teste completo do comando doctor identificado |
-| CLI-04 | Headless | `exec` cria sessão nova, prompt até 9.000 caracteres, mode/model, JSONL opcional, permissões explícitas e allow-push; exits 0 sucesso, 1 falha, 3 negação e 130 cancelamento. | `M/options.ts`, `M/exec.ts` | pendente | `M/exec.test.ts` (inclui HTTP → geração → SDK → tools simulados) |
+| CLI-03 | Doctor | Diagnóstico de runtime, diretório gravável, SQLite/migrations, Docker/imagem, ferramentas detectadas versus imagem e configuração de modelos sem valores de chaves. O doctor legado pode escrever/migrar: não foi executado nesta inspeção. | `M/doctor.ts`, `M/doctor-tools.ts` | em andamento | `crates/cli/tests/cli.rs` cobre o comando offline/JSON. Comparação integral das ferramentas na imagem permanece pendente. Referências: `M/doctor-tools.test.ts`, `S/security/docker-availability.test.ts`. |
+| CLI-04 | Headless | `exec` cria sessão nova, prompt até 9.000 caracteres, mode/model, JSONL opcional, permissões explícitas e allow-push; exits 0 sucesso, 1 falha, 3 negação e 130 cancelamento. | `M/options.ts`, `M/exec.ts` | em andamento | Rust integrado ao backend da TUI; testes de PLAN, aprovação/negação, JSONL e limite em `crates/cli/tests/cli.rs`. Referência: `M/exec.test.ts`. |
 | CLI-05 | Ajuda/versão | `--help`/`-h`, `--version`/`-v`, rejeição de argumentos ambíguos/duplicados/inválidos; ajuda não abre banco nem providers. | `M/options.ts`, `M/cli.ts` | em andamento | `M/options.test.ts`, `M/launcher.test.ts`, `M/exec.test.ts`; início do port em `crates/cli/tests/cli.rs`, ainda sem os demais comandos |
 | UI-01 | Telas | Home, nova sessão e sessão/histórico; shell compartilhado, título/caminho, mensagens usuário/assistente/erro, reasoning/ferramentas, avisos e interrupção visível. | `C/screens/home.tsx`, `C/screens/new-session.tsx`, `C/screens/session.tsx`, `C/components/messages/bot-message.tsx`, `C/components/session-shell.tsx` | feito | `C/screens/session-render.test.tsx`, `C/components/session-shell.test.tsx`, `C/hooks/use-chat.test.tsx`, `scripts/cui-text.test.ts` |
 | UI-02 | Entrada | Texto multilinha, Ctrl+J para quebra, Enter para envio, Tab para modo, autocomplete de menções @ a arquivos/diretórios e comandos /; limite de mensagem e bloqueio durante aprovação/retomada. | `C/components/input-bar.tsx`, `C/components/command-menu/use-command-menu.ts` | em andamento | `C/components/session-shell.test.tsx`, `C/dialogs/agents-dialog.test.tsx`, `C/components/approval-panel.test.tsx`; sem suíte dedicada completa de menções identificada |
@@ -1179,3 +1179,91 @@ A tentativa de terminal interativo Windows não retornou sessão controlável;
 Windows Terminal/PowerShell com teclado ABNT2 físico permanece sem validação
 manual. O CI existente cobre Windows/Linux/macOS, mas não foi disparado nesta
 revisão. Testes ignorados não contam como aprovados.
+
+### Integração OAuth e CLI — 21/10/2026
+
+Implementação no checkout atual, preservando as correções e snapshots do M6,
+sem branch, commit, push ou merge. O fluxo segue a documentação oficial de
+[login OSS](https://developers.openai.com/siwc/token-sharing-open-source/sign-in),
+[registros e sessões](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions),
+[modelos e inferência](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference)
+e [tokens](https://developers.openai.com/siwc/token-sharing-open-source/token-reference).
+Detalhes operacionais, dependências justificadas e códigos de saída estão em
+[oauth-cli.md](oauth-cli.md).
+
+- CLI e TUI usam o mesmo serviço OAuth e o mesmo backend de geração.
+  `/chatgpt` deixou de ser placeholder: oferece registros separados,
+  ativação, reautorização e logout. O login apresenta uma URL para abertura
+  manual, espera o callback loopback e permite cancelar com Esc/Ctrl+C.
+  Eventos de login cancelado não sobrescrevem uma operação posterior.
+- Client_id emitido, host opaco e identidade validada por issuer/subject são
+  persistidos por registro. Email não é chave de conta. State, nonce,
+  PKCE S256, assinatura JWKS, audience, expiração e consumo único do callback
+  são verificados; o registro emitido é retido antes da troca do código.
+- ModelRegistry recebe apenas o catálogo visível da conta ativa. A API
+  pública Responses recebe `store=false` e streaming; conclusão exige
+  evento terminal válido. Falta de permissão/limite do plano gera estado
+  explícito e exige escolha; não existe fallback automático de modelo,
+  conta ou API key.
+- Store ganhou persistência privada separada do SQLite de sessões, com
+  proteção owner-only, rejeição de links/junctions/hardlinks, substituição
+  atômica e lock estável entre processos. Refresh e gravação conjunta de
+  tokens/validade ocorrem sob o mesmo lock. Logout tenta revogação remota
+  antes de limpar o registro local e informa quando não há confirmação.
+- Gerações ficam vinculadas à conta; troca/logout em outra instância são
+  observados para cancelamento pelo backend. PLAN continua filtrando as
+  ferramentas no core. Não foram ampliadas políticas de aprovação, undo,
+  checkpoints, leases ou isolamento por workspace.
+- `exec` cria sessão e usa o pipeline existente, com PLAN padrão, políticas
+  explícitas, JSONL e saídas 0/1/2/3/130. `doctor` verifica estado gravável,
+  SQLite, configuração, sandbox e contas, com JSON e saídas 0/1/2/130.
+  Diagnóstico detalhado de ferramentas dentro da imagem e abertura automática
+  do navegador permanecem lacunas da paridade histórica CLI-03/UI-07.
+
+Arquivos principais: `crates/providers/src/chatgpt.rs` e seus testes,
+`registry.rs`, `http.rs`, `wire.rs`; `crates/store/src/private.rs` e
+`tests/private.rs`; `crates/cli/src/commands.rs`, `main.rs`, `backend.rs` e
+`tests/cli.rs`; ports/app/runtime/render e `tests/focus.rs` da TUI;
+`AgentError` do core, manifests, lockfile e documentação. Os snapshots do M6
+não foram alterados nesta integração.
+
+Validação efetivamente concluída no Windows/PowerShell:
+
+- `cargo fmt --check`: passou.
+- `cargo clippy --all-targets -- -D warnings`: passou.
+- `cargo test --locked --workspace -- --test-threads=1`: passou com
+  **217 testes, zero falhas e um teste Docker real ignorado**. Esse teste
+  ignorado não conta como aprovação. A rodada inclui os cinco snapshots
+  existentes, sem atualizar nem aceitar snapshots automaticamente.
+- Servidor OAuth/JWKS fictício local: state, nonce, audience, issuer,
+  subject divergente, token expirado, callback repetido/Host incorreto,
+  cancelamento antes/durante a troca, contas com mesmo email, permissão
+  ausente, logout e invalidação por 401/invalid_grant; dois processos
+  disputando refresh produzem uma única rotação. Streaming parcial/EOF,
+  erro, recusa do plano, MIME inválido e conclusão válida foram exercitados
+  sem fallback ou repetição automática da inferência.
+- Arquivos temporários fictícios: ACL privada Windows, recusa de ACL ampla,
+  lock cancelável, atualização atômica, JSON inválido preservado e hardlink
+  recusado. CLI pública: PLAN, BUILD com aprovação/negação, JSONL, limites
+  e doctor offline. A TUI cobre cancelamento do diálogo sem enviar mensagem,
+  além das regressões anteriores de `/`, paste, Unicode, modos e geometria.
+
+Os builds de validação usaram `CARGO_PROFILE_TEST_DEBUG=0`,
+`CARGO_PROFILE_DEV_DEBUG=0` e `CARGO_INCREMENTAL=0`, apenas no ambiente dos
+comandos, por falta de espaço em disco. Não houve alteração de perfis no
+projeto. A falta de espaço interrompeu uma rodada intermediária; os dois
+arquivos de testes afetados foram restaurados e passaram na rodada final.
+Foram removidos apenas caches incrementais e símbolos PDB gerados, com
+autorização, e encerrada uma demonstração anterior que bloqueava myagent.exe.
+O erro de ACL encontrado nos testes foi corrigido usando explicitamente
+SE_FILE_OBJECT e aceitando a representação canônica P/PAI da DACL protegida,
+sempre com apenas uma ACE do usuário atual. LNK1104 transitório exigiu repetir
+o gate completo; a rodada final terminou com código zero.
+
+Não houve login, inferência ou revogação com conta real, nem leitura de
+credenciais existentes. Os testes usam somente temporários e valores
+fictícios. Não houve verificação manual de Windows Terminal/ABNT2, Linux ou
+macOS nesta integração. WSL previamente consultado não tinha cargo/rustc;
+o CI existente de três sistemas foi preservado e não foi disparado. As
+imagens/mockup continuam indisponíveis. A validação automatizada Windows
+não substitui essas verificações externas/manuais.

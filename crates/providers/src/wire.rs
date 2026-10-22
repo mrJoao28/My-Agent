@@ -63,7 +63,7 @@ pub(crate) fn request(kind: ProviderKind, r: &ProviderRequest) -> Result<Value> 
                     messages.push(json!({"role":if message.role==ModelRole::Assistant{"assistant"}else{"user"},"content":content}));
                 }
             }
-            ProviderKind::Openai => {
+            ProviderKind::Openai | ProviderKind::Chatgpt => {
                 if let Some(raw) = message
                     .provider_metadata
                     .as_ref()
@@ -138,7 +138,7 @@ pub(crate) fn request(kind: ProviderKind, r: &ProviderRequest) -> Result<Value> 
     }
     let definitions:Vec<Value>=r.tools.iter().map(|t| match kind{
         ProviderKind::Anthropic=>json!({"name":t.name,"description":t.description,"input_schema":t.parameters}),
-        ProviderKind::Openai=>json!({"type":"function","name":t.name,"description":t.description,"parameters":t.parameters,"strict":false}),
+        ProviderKind::Openai | ProviderKind::Chatgpt=>json!({"type":"function","name":t.name,"description":t.description,"parameters":t.parameters,"strict":false}),
         ProviderKind::Google=>json!({"name":t.name,"description":t.description,"parameters":t.parameters}),
         ProviderKind::Ollama=>json!({"type":"function","function":{"name":t.name,"description":t.description,"parameters":t.parameters}})
     }).collect();
@@ -146,7 +146,7 @@ pub(crate) fn request(kind: ProviderKind, r: &ProviderRequest) -> Result<Value> 
         ProviderKind::Anthropic => {
             json!({"model":r.model,"system":r.system,"messages":messages,"stream":true,"max_tokens":r.max_output_tokens})
         }
-        ProviderKind::Openai => {
+        ProviderKind::Openai | ProviderKind::Chatgpt => {
             json!({"model":r.model,"instructions":r.system,"input":messages,"stream":true,"store":false,"max_output_tokens":r.max_output_tokens,"include":["reasoning.encrypted_content"]})
         }
         ProviderKind::Google => {
@@ -165,7 +165,9 @@ pub(crate) fn request(kind: ProviderKind, r: &ProviderRequest) -> Result<Value> 
         };
     } else {
         match kind {
-            ProviderKind::Openai | ProviderKind::Ollama => body["tool_choice"] = json!("none"),
+            ProviderKind::Openai | ProviderKind::Chatgpt | ProviderKind::Ollama => {
+                body["tool_choice"] = json!("none")
+            }
             ProviderKind::Google => {
                 body["toolConfig"] = json!({"functionCallingConfig":{"mode":"NONE"}})
             }
@@ -310,9 +312,11 @@ impl WireParser {
                     json!({"anthropic":{"blocks":self.raw.values().collect::<Vec<_>>()}}),
                 ))
             }
-            ProviderKind::Openai if !self.raw.is_empty() => events.push(ProviderEvent::Metadata(
-                json!({"openai":{"output":self.raw.values().collect::<Vec<_>>()}}),
-            )),
+            ProviderKind::Openai | ProviderKind::Chatgpt if !self.raw.is_empty() => {
+                events.push(ProviderEvent::Metadata(
+                    json!({"openai":{"output":self.raw.values().collect::<Vec<_>>()}}),
+                ))
+            }
             ProviderKind::Google if !self.google_parts.is_empty() => events.push(
                 ProviderEvent::Metadata(json!({"google":{"parts":self.google_parts}})),
             ),
@@ -339,7 +343,7 @@ impl WireParser {
             return Err(AgentError::Protocol);
         }
         match self.kind {
-            ProviderKind::Openai => self.openai(&value, &mut events)?,
+            ProviderKind::Openai | ProviderKind::Chatgpt => self.openai(&value, &mut events)?,
             ProviderKind::Anthropic => self.anthropic(&value, &mut events)?,
             ProviderKind::Google => self.google(&value, &mut events)?,
             ProviderKind::Ollama => self.ollama(&value, &mut events)?,

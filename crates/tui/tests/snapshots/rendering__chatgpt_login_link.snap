@@ -1,0 +1,32 @@
+---
+source: crates/tui/tests/rendering.rs
+expression: text
+---
+My-Agent  │  My-Agent  │  Ollama · local  │                                       PLAN   [BUILD]
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ┌ Conta ChatGPT ───────────────────────────────────────────────────────────────────────────────┐
+  │Continue com ChatGPT no navegador.                                                            │
+  │Abrindo o navegador padrão...                                                                 │
+  │                                                                                              │
+  │┌ Link de login · somente leitura ───────────────────────────────────────────────────────────┐│
+  ││https://auth.openai.com/api/accounts/authorize?state=fixture&nonce=test                     ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+  ││                                                                                            ││
+┃ ││                                                                                            ││─┐
+┃ │└────────────────────────────────────────────────────────────────────────────────────────────┘│ │
+┃ │Enter/O abrir navegador · C copiar link completo                                              │ │
+┃ │↑↓ PgUp/PgDn mouse · linha 1/1 · Esc cancela                                                  │ │
+┃─│Seleção nativa do terminal: segure Shift ao arrastar.                                         │─┘
+To└──────────────────────────────────────────────────────────────────────────────────────────────┘
+
+⠋ Pronto · 0 sem medição
+Enter enviar · Ctrl+J nova linha · Tab modo · Esc/Ctrl+C interromper · / comandos

@@ -20,6 +20,39 @@ pub struct Dialog {
     pub selected: usize,
     pub choices: Vec<Choice>,
     pub note: String,
+    pub login: Option<LoginPrompt>,
+}
+/// An ephemeral authorization URL is never included in Debug/log output.
+#[derive(Clone)]
+pub struct LoginPrompt {
+    url: String,
+    pub message: String,
+    pub scroll: usize,
+    pub max_scroll: usize,
+}
+impl std::fmt::Debug for LoginPrompt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("LoginPrompt { url: [REDACTED] }")
+    }
+}
+impl LoginPrompt {
+    pub fn new(url: String) -> Self {
+        Self {
+            url,
+            message: "Abrindo o navegador padrão...".into(),
+            scroll: 0,
+            max_scroll: 0,
+        }
+    }
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+    pub fn scroll_by(&mut self, delta: isize) {
+        self.scroll = self
+            .scroll
+            .saturating_add_signed(delta)
+            .min(self.max_scroll);
+    }
 }
 impl Dialog {
     pub fn new(kind: DialogKind, title: &str, choices: Vec<Choice>) -> Self {
@@ -30,6 +63,7 @@ impl Dialog {
             selected: 0,
             choices,
             note: String::new(),
+            login: None,
         }
     }
     pub fn filtered(&self) -> Vec<&Choice> {

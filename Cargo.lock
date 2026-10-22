@@ -1243,6 +1243,7 @@ dependencies = [
 name = "myagent-tui"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "crossterm",
  "insta",
  "myagent-core",
@@ -1255,6 +1256,7 @@ dependencies = [
  "tokio",
  "unicode-segmentation",
  "unicode-width 0.2.0",
+ "url",
 ]
 
 [[package]]

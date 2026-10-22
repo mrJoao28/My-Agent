@@ -36,6 +36,34 @@ fn capture(app: &mut App, w: u16, h: u16) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+
+#[test]
+fn login_dialog_has_read_only_url_actions_and_scrolls_long_links() {
+    use myagent_tui::dialog::LoginPrompt;
+    let mut app = app();
+    app.loading = true;
+    let mut dialog = Dialog::new(DialogKind::ChatGpt, "Conta ChatGPT", vec![]);
+    dialog.login = Some(LoginPrompt::new(
+        "https://auth.openai.com/api/accounts/authorize?state=fixture&nonce=test".into(),
+    ));
+    app.dialog = Some(dialog);
+    let text = capture(&mut app, 100, 28);
+    insta::assert_snapshot!("chatgpt_login_link", text);
+    assert!(text.contains("C copiar link completo"));
+    assert!(!text.contains("Buscar:"));
+    app.dialog.as_mut().unwrap().login = Some(LoginPrompt::new(format!(
+        "https://auth.openai.com/api/accounts/authorize?state={}&last=visible",
+        "a".repeat(5000)
+    )));
+    capture(&mut app, 80, 24);
+    let login = app.dialog.as_mut().unwrap().login.as_mut().unwrap();
+    assert!(login.max_scroll > 0);
+    login.scroll = login.max_scroll;
+    assert!(capture(&mut app, 80, 24).contains("last=visible"));
+    for (width, height) in [(45, 13), (60, 18), (120, 40)] {
+        capture(&mut app, width, height);
+    }
+}
 #[test]
 fn grafite_code_panels_header_and_single_ten_million_bar() {
     let mut app = app();

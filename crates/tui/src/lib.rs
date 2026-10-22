@@ -18,6 +18,7 @@ pub fn safe_text(text: &str) -> String {
 pub mod app;
 pub mod approval;
 pub mod dialog;
+pub mod links;
 pub mod ports;
 pub mod preview;
 pub mod render;

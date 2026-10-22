@@ -8,7 +8,30 @@ legado nem de outros aplicativos. Os endpoints normais são exclusivamente
 ## Conta e modelos
 
 Na TUI, `/chatgpt` oferece login, reautorização de um registro, ativação e
-logout. Abra no navegador a URL apresentada; Esc ou Ctrl+C cancela a espera.
+logout. Se ainda não houver contas salvas, o comando inicia o login direto;
+com registros existentes, preserva o seletor de contas. O item escolhido pelas
+setas no menu `/` é executado por Enter, mesmo se o campo contiver só `/`.
+
+A TUI solicita a abertura do navegador padrão automaticamente. Enquanto o
+login estiver pendente, **Enter/O** abre novamente a mesma URL e **C** copia
+o link completo, sem quebras visuais ou bordas. O endereço é somente leitura
+e rolável por setas, PgUp/PgDn, Home/End e mouse. Esc ou Ctrl+C cancela a
+espera e invalida eventos atrasados, sem enviar mensagens ao modelo.
+
+No Linux, a abertura usa xdg-open/gio; no WSL, tenta wslview/PowerShell;
+macOS usa open e Windows usa PowerShell. A cópia usa wl-copy, xclip ou xsel
+no Linux, pbcopy no macOS e Set-Clipboard no Windows/WSL. São helpers do
+desktop, opcionais; não executam comandos gerados pelo modelo. URLs são
+passadas como um argumento ou via stdin, nunca interpoladas em shell, e
+os helpers não escrevem sobre a tela do terminal.
+
+Se o clipboard nativo estiver indisponível, C envia uma solicitação OSC 52
+ao terminal. A mensagem distingue essa solicitação de uma cópia nativa
+confirmada: o terminal pode bloquear OSC 52. Como alternativa manual, segure
+Shift para selecionar texto com o mouse e use Ctrl+Shift+C no terminal Linux.
+Falha ao abrir oferece nova tentativa/cópia; recusa ou expiração do login
+mantém ações de tentar novamente e escolher modelos, sem erro de API key.
+
 O callback loopback usa porta aleatória, state, nonce e PKCE S256. A identidade
 é validada pela assinatura JWKS, issuer, audience do client_id emitido,
 expiração e subject; o callback válido é consumido uma única vez.
@@ -103,7 +126,8 @@ acoplar tokens ao journal de sessões.
 
 A evidência de execução está em [PARITY.md](PARITY.md). Login com conta real,
 inferência externa paga e revogação real não fazem parte dos testes fictícios.
-O login apresenta uma URL para abertura manual; abertura automática do
-navegador e paridade integral do diagnóstico de ferramentas na imagem
-Docker continuam pendentes. Os screenshots/mockup anteriormente citados
+O comando headless `chatgpt login` mantém a URL no terminal para abertura
+manual; abertura automática e cópia por atalhos são implementadas na TUI.
+A paridade integral do diagnóstico de ferramentas na imagem Docker continua
+pendente. Os screenshots/mockup anteriormente citados
 não estavam disponíveis; nenhuma comparação visual com eles foi declarada.

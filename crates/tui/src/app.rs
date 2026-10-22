@@ -25,6 +25,8 @@ pub enum Action {
     RefreshModels,
     Account(AccountOperation),
     CancelLogin,
+    OpenLoginLink,
+    CopyLoginLink,
     NewSession,
     LoadSession(String),
     Undo(String),
@@ -66,6 +68,7 @@ pub struct App {
     pub max_scroll: usize,
     pub follow: bool,
     pub menu_selected: usize,
+    pub menu_navigated: bool,
     pub commands_dismissed: bool,
     pub mentions: Vec<String>,
     pub mention_query: Option<String>,
@@ -118,6 +121,7 @@ impl App {
             max_scroll: 0,
             follow: true,
             menu_selected: 0,
+            menu_navigated: false,
             commands_dismissed: false,
             mentions: vec![],
             mention_query: None,
@@ -134,6 +138,7 @@ impl App {
     }
     pub fn account_view(&mut self, view: AccountView) {
         self.loading = false;
+        self.status = "Contas ChatGPT".into();
         if let Some(dialog) = &mut self.dialog
             && dialog.kind == DialogKind::ChatGpt
         {
@@ -144,7 +149,32 @@ impl App {
                 .collect();
             dialog.note = view.note;
             dialog.selected = 0;
+            dialog.query.clear();
+            dialog.login = None;
         }
+    }
+    pub fn account_error(&mut self, message: String) {
+        self.loading = false;
+        self.status = "Falha ao atualizar conta ChatGPT".into();
+        if let Some(dialog) = &mut self.dialog
+            && dialog.kind == DialogKind::ChatGpt
+        {
+            dialog.login = None;
+            dialog.query.clear();
+            dialog.selected = 0;
+            dialog.note = crate::safe_text(&message);
+            dialog.choices = vec![
+                Choice {
+                    id: "login".into(),
+                    label: "Continuar com ChatGPT - tentar novamente".into(),
+                },
+                Choice {
+                    id: "models".into(),
+                    label: "Escolher um modelo explicitamente".into(),
+                },
+            ];
+        }
+        self.notify(message, true);
     }
     pub fn tokens(&self) -> u64 {
         self.measured
@@ -507,6 +537,7 @@ impl App {
             {
                 self.commands_dismissed = false;
                 self.menu_selected = 0;
+                self.menu_navigated = false;
                 if !self.input.insert(&text) {
                     self.notify("Limite de 9000 caracteres atingido.", true);
                 }
@@ -519,7 +550,11 @@ impl App {
                     _ => 0,
                 };
                 if let Some(dialog) = &mut self.dialog {
-                    dialog.advance(delta);
+                    if let Some(login) = &mut dialog.login {
+                        login.scroll_by(delta);
+                    } else {
+                        dialog.advance(delta);
+                    }
                 } else if let Some(approval) = &mut self.approval {
                     approval.scroll_by(delta);
                 } else {
@@ -548,7 +583,26 @@ impl App {
                 self.dialog = None;
                 if login {
                     self.loading = false;
+                    self.status = "Login cancelado".into();
                     return vec![Action::CancelLogin];
+                }
+                return vec![];
+            }
+            if let Some(login) = &mut dialog.login {
+                match key.code {
+                    KeyCode::Enter | KeyCode::Char('o' | 'O') if !control && !altgr => {
+                        return vec![Action::OpenLoginLink];
+                    }
+                    KeyCode::Char('c' | 'C') if !control && !altgr => {
+                        return vec![Action::CopyLoginLink];
+                    }
+                    KeyCode::Up => login.scroll_by(-1),
+                    KeyCode::Down => login.scroll_by(1),
+                    KeyCode::PageUp => login.scroll_by(-8),
+                    KeyCode::PageDown => login.scroll_by(8),
+                    KeyCode::Home => login.scroll = 0,
+                    KeyCode::End => login.scroll = login.max_scroll,
+                    _ => {}
                 }
                 return vec![];
             }
@@ -571,6 +625,9 @@ impl App {
                 KeyCode::Enter => {
                     let kind = dialog.kind;
                     let selected = dialog.selected();
+                    if selected.is_none() {
+                        return vec![];
+                    }
                     self.dialog = None;
                     if let Some(id) = selected {
                         match kind {
@@ -592,6 +649,7 @@ impl App {
                             }
                             DialogKind::Sessions => {
                                 self.loading = true;
+                                self.status = "Atualizando conta ChatGPT".into();
                                 return vec![Action::LoadSession(id)];
                             }
                             DialogKind::ChatGpt => {
@@ -679,6 +737,7 @@ impl App {
             if self.command_menu_open() {
                 if let Some((name, _)) = self.commands().get(self.menu_selected).copied() {
                     self.input.set(name);
+                    self.menu_navigated = false;
                 }
                 return vec![];
             }
@@ -706,10 +765,17 @@ impl App {
             }
             KeyCode::Enter => {
                 let exact = COMMANDS.iter().any(|(name, _)| *name == self.input.text());
-                if exact {
-                    let command = self.input.text().to_owned();
+                if exact || menu && self.menu_navigated {
+                    let command = if exact {
+                        self.input.text().to_owned()
+                    } else {
+                        self.commands()[self.menu_selected.min(self.commands().len() - 1)]
+                            .0
+                            .to_owned()
+                    };
                     self.input.take();
                     self.menu_selected = 0;
+                    self.menu_navigated = false;
                     return self.command(&command);
                 }
                 return self.submit(false);
@@ -729,18 +795,28 @@ impl App {
                     self.notify("Limite de 9000 caracteres atingido.", true);
                 }
                 self.menu_selected = 0;
+                self.menu_navigated = false;
             }
             KeyCode::Backspace => {
                 self.input.backspace();
                 self.menu_selected = 0;
+                self.menu_navigated = false;
             }
-            KeyCode::Delete => self.input.delete(),
+            KeyCode::Delete => {
+                self.input.delete();
+                self.menu_selected = 0;
+                self.menu_navigated = false;
+            }
             KeyCode::Left => self.input.left(),
             KeyCode::Right => self.input.right(),
             KeyCode::Home => self.input.home(),
             KeyCode::End => self.input.end(),
-            KeyCode::Up if menu => self.menu_selected = self.menu_selected.saturating_sub(1),
+            KeyCode::Up if menu => {
+                self.menu_navigated = true;
+                self.menu_selected = self.menu_selected.saturating_sub(1);
+            }
             KeyCode::Down if menu => {
+                self.menu_navigated = true;
                 self.menu_selected =
                     (self.menu_selected + 1).min(self.commands().len().saturating_sub(1))
             }

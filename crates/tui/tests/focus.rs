@@ -43,6 +43,93 @@ fn account_dialog_cancellation_does_not_submit_or_change_mode() {
     assert!(app.dialog.is_none());
     assert_eq!(app.mode, Mode::Build);
 }
+
+#[test]
+fn navigating_slash_menu_then_enter_executes_chatgpt_without_inference() {
+    use myagent_tui::ports::AccountOperation;
+    let mut app = app();
+    key(&mut app, KeyCode::Char('/'));
+    for _ in 0..6 {
+        key(&mut app, KeyCode::Down);
+    }
+    assert_eq!(app.commands()[app.menu_selected].0, "/chatgpt");
+    assert_eq!(app.input.text(), "/");
+    let actions = key(&mut app, KeyCode::Enter);
+    assert!(matches!(
+        actions.as_slice(),
+        [Action::Account(AccountOperation::Status)]
+    ));
+    assert_eq!(app.dialog.as_ref().unwrap().kind, DialogKind::ChatGpt);
+    assert!(app.input.text().is_empty());
+    assert!(!app.active);
+    assert!(app.transcript.entries.is_empty());
+}
+
+#[test]
+fn login_link_actions_and_scrolling_never_reach_background_input() {
+    use myagent_tui::dialog::LoginPrompt;
+    let mut app = app();
+    app.input.set("keep this draft");
+    app.loading = true;
+    let mut dialog = Dialog::new(DialogKind::ChatGpt, "Conta ChatGPT", vec![]);
+    let mut login =
+        LoginPrompt::new("https://auth.openai.com/api/accounts/authorize?state=fixture".into());
+    login.max_scroll = 50;
+    assert!(!format!("{login:?}").contains("fixture"));
+    dialog.login = Some(login);
+    app.dialog = Some(dialog);
+    for code in [KeyCode::Enter, KeyCode::Char('o')] {
+        assert!(matches!(
+            key(&mut app, code).as_slice(),
+            [Action::OpenLoginLink]
+        ));
+    }
+    assert!(matches!(
+        key(&mut app, KeyCode::Char('c')).as_slice(),
+        [Action::CopyLoginLink]
+    ));
+    key(&mut app, KeyCode::PageDown);
+    assert_eq!(
+        app.dialog.as_ref().unwrap().login.as_ref().unwrap().scroll,
+        8
+    );
+    key(&mut app, KeyCode::End);
+    assert_eq!(
+        app.dialog.as_ref().unwrap().login.as_ref().unwrap().scroll,
+        50
+    );
+    key(&mut app, KeyCode::Tab);
+    assert_eq!(app.mode, Mode::Build);
+    assert_eq!(app.input.text(), "keep this draft");
+    let actions = app.event(Event::Key(KeyEvent::new(
+        KeyCode::Char('c'),
+        KeyModifiers::CONTROL,
+    )));
+    assert!(matches!(actions.as_slice(), [Action::CancelLogin]));
+    assert!(app.dialog.is_none());
+    assert!(!app.loading);
+    assert!(!app.active);
+}
+
+#[test]
+fn empty_dialog_enter_stays_open_and_account_failure_offers_retry() {
+    use myagent_tui::ports::AccountView;
+    let mut app = app();
+    app.dialog = Some(Dialog::new(DialogKind::ChatGpt, "Conta ChatGPT", vec![]));
+    assert!(key(&mut app, KeyCode::Enter).is_empty());
+    assert!(app.dialog.is_some());
+    app.loading = true;
+    app.account_error("Login expirou. Tente novamente.".into());
+    assert!(!app.loading);
+    assert!(app.dialog.as_ref().unwrap().login.is_none());
+    assert_eq!(app.dialog.as_ref().unwrap().choices[0].id, "login");
+    app.account_view(AccountView {
+        choices: vec![("login".into(), "Continuar com ChatGPT".into())],
+        note: "Pronto".into(),
+    });
+    assert!(app.dialog.as_ref().unwrap().query.is_empty());
+    assert_eq!(app.status, "Contas ChatGPT");
+}
 fn key(app: &mut App, code: KeyCode) -> Vec<Action> {
     app.event(Event::Key(KeyEvent::new(code, KeyModifiers::NONE)))
 }

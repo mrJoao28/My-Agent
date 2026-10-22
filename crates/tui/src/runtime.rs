@@ -14,8 +14,9 @@ enum UiEvent {
     Loaded(Box<SessionView>, Screen, bool),
     Sessions(Vec<Session>),
     Models(Vec<ModelChoice>),
-    Account(u64, Result<(AccountView, Vec<ModelChoice>)>),
+    Account(u64, bool, Result<(AccountView, Vec<ModelChoice>)>),
     LoginUrl(u64, String),
+    LinkDone(u64, bool, crate::links::LinkResult),
     Finished {
         view: Option<Box<SessionView>>,
         error: Option<String>,
@@ -43,15 +44,39 @@ struct Driver<'a> {
     sender: mpsc::Sender<UiEvent>,
     cancel: Option<CancellationToken>,
     account_epoch: u64,
+    link_pending: bool,
     shutdown: CancellationToken,
     jobs: Vec<JoinHandle<()>>,
 }
 impl Driver<'_> {
+    fn link(&mut self, copy: bool, app: &App) {
+        if self.link_pending {
+            return;
+        }
+        let Some(login) = app.dialog.as_ref().and_then(|dialog| dialog.login.as_ref()) else {
+            return;
+        };
+        let Some(cancel) = &self.cancel else {
+            return;
+        };
+        let token = cancel.child_token();
+        let url = login.url().to_owned();
+        let sender = self.sender.clone();
+        let epoch = self.account_epoch;
+        self.link_pending = true;
+        self.jobs.push(self.runtime.spawn(async move {
+            let result = crate::links::perform(&url, copy, &token).await;
+            let _ = sender.send(UiEvent::LinkDone(epoch, copy, result)).await;
+        }));
+    }
     fn action(&mut self, action: Action, app: &mut App) -> bool {
         match action {
             Action::Quit => return false,
+            Action::OpenLoginLink => self.link(false, app),
+            Action::CopyLoginLink => self.link(true, app),
             Action::CancelLogin => {
                 self.account_epoch = self.account_epoch.wrapping_add(1);
+                self.link_pending = false;
                 if let Some(cancel) = self.cancel.take() {
                     cancel.cancel();
                 }
@@ -69,7 +94,12 @@ impl Driver<'_> {
                 }));
             }
             Action::Account(op) => {
+                let status_only = matches!(op, crate::ports::AccountOperation::Status);
+                if let Some(cancel) = self.cancel.take() {
+                    cancel.cancel();
+                }
                 self.account_epoch = self.account_epoch.wrapping_add(1);
+                self.link_pending = false;
                 let epoch = self.account_epoch;
                 let backend = self.backend.clone();
                 let sender = self.sender.clone();
@@ -90,6 +120,7 @@ impl Driver<'_> {
                     let _ = sender
                         .send(UiEvent::Account(
                             epoch,
+                            status_only,
                             result.map(|view| (view, backend.models())),
                         ))
                         .await;
@@ -242,6 +273,7 @@ pub fn run(
         sender,
         cancel: None,
         account_epoch: 0,
+        link_pending: false,
         shutdown: shutdown.clone(),
         jobs: vec![],
     };
@@ -255,27 +287,88 @@ pub fn run(
                     UiEvent::Stream(event) => app.stream(event),
                     UiEvent::Loaded(view, screen, resume) => app.load(*view, screen, resume),
                     UiEvent::Sessions(sessions) => app.sessions(sessions),
-                    UiEvent::Account(epoch, result) => {
+                    UiEvent::Account(epoch, status_only, result) => {
                         if epoch == driver.account_epoch {
-                            driver.cancel = None;
+                            if let Some(cancel) = driver.cancel.take() {
+                                cancel.cancel();
+                            }
+                            driver.link_pending = false;
                             app.loading = false;
                             match result {
                                 Ok((view, models)) => {
+                                    // With no saved registration, /chatgpt goes directly
+                                    // to sign-in. Existing accounts retain their picker.
+                                    let first_login = status_only
+                                        && view.choices.iter().any(|(id, _)| id == "login")
+                                        && view.choices.iter().all(|(id, _)| {
+                                            matches!(id.as_str(), "login" | "models")
+                                        });
                                     app.models = models;
                                     app.account_view(view);
+                                    if first_login {
+                                        if let Some(dialog) = &mut app.dialog {
+                                            dialog.choices.clear();
+                                            dialog.note = "Preparando login com ChatGPT...".into();
+                                        }
+                                        app.loading = true;
+                                        driver.action(
+                                            Action::Account(crate::ports::AccountOperation::Login(
+                                                None,
+                                            )),
+                                            &mut app,
+                                        );
+                                    }
                                 }
-                                Err(error) => app.notify(error_message(error), true),
+                                Err(error) => {
+                                    let message = match error {
+                                        myagent_core::AgentError::Authentication => "Não foi possível autenticar a conta ChatGPT. Tente entrar novamente.".into(),
+                                        myagent_core::AgentError::Cancelled => "Login ChatGPT cancelado.".into(),
+                                        other => error_message(other),
+                                    };
+                                    app.account_error(message);
+                                }
                             }
                         }
                     }
                     UiEvent::LoginUrl(epoch, url) => {
                         if epoch == driver.account_epoch
-                            && let Some(dialog) = &mut app.dialog
-                            && dialog.kind == crate::dialog::DialogKind::ChatGpt
+                            && app.loading
+                            && app.dialog.as_ref().is_some_and(|dialog| {
+                                dialog.kind == crate::dialog::DialogKind::ChatGpt
+                            })
                         {
-                            dialog.note = format!(
-                                "Abra no navegador para continuar com ChatGPT:\n{url}\nEsc cancela o login."
-                            );
+                            if crate::links::valid_login_url(&url) {
+                                app.dialog.as_mut().unwrap().login =
+                                    Some(crate::dialog::LoginPrompt::new(url));
+                                app.status = "Aguardando login no navegador".into();
+                                driver.link(false, &app);
+                            } else {
+                                driver.action(Action::CancelLogin, &mut app);
+                                app.account_error(
+                                    "O serviço retornou um link de login inválido.".into(),
+                                );
+                            }
+                        }
+                    }
+                    UiEvent::LinkDone(epoch, _copy, result) => {
+                        if epoch == driver.account_epoch {
+                            driver.link_pending = false;
+                            if let Some(login) =
+                                app.dialog.as_mut().and_then(|dialog| dialog.login.as_mut())
+                            {
+                                use crate::links::LinkResult;
+                                login.message = match result {
+                                    LinkResult::Opened => "Navegador solicitado. Conclua o login na página da OpenAI.".into(),
+                                    LinkResult::Copied => "Link completo copiado para a área de transferência.".into(),
+                                    LinkResult::TerminalCopy => {
+                                        if crate::links::terminal_copy(login.url(), &mut io::stdout()).is_ok() {
+                                            "Cópia solicitada ao terminal (OSC 52). Se bloqueada, use Shift+seleção e Ctrl+Shift+C.".into()
+                                        } else { "Não foi possível copiar. Use Shift+seleção e Ctrl+Shift+C.".into() }
+                                    }
+                                    LinkResult::Unavailable => "Não foi possível abrir o navegador. Enter/O tenta novamente; C copia o link.".into(),
+                                    LinkResult::Cancelled => "Ação cancelada.".into(),
+                                };
+                            }
                         }
                     }
                     UiEvent::Models(models) => {

@@ -159,8 +159,10 @@ Para conferência manual, execute `--demo`: observe os dois painéis, teste
 Enter/Tab/Y/N na aprovação, `/undo`, diálogos, Esc/Ctrl+C, resize e saída.
 
 O diálogo `/chatgpt` gerencia registros OAuth, conta ativa, reautorização e
-logout; `/models` consulta o catálogo da conta ativa. O login apresenta uma
-URL para abertura manual no navegador. Veja [OAuth e CLI](oauth-cli.md).
+logout; `/models` consulta o catálogo da conta ativa. Sem contas, `/chatgpt`
+inicia o login e solicita abrir o navegador padrão. O painel permite
+Enter/O para abrir novamente, C para copiar o link e setas/Pg para rolar;
+Esc/Ctrl+C cancela. Veja [OAuth e CLI](oauth-cli.md) para helpers e fallback.
 No fechamento original do M6, o legado `packages/cui/src` e
 `docs/APROVACOES_E_UNDO.md` não estavam acessíveis naquele ambiente. Nesta
 revisão, o documento de aprovação/undo foi lido no checkout local somente

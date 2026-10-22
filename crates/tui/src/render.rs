@@ -539,9 +539,18 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         layout[5],
     );
     approval_panel(frame, app, p);
-    if let Some(dialog) = &app.dialog {
-        let w = area.width.saturating_sub(8).min(88);
-        let h = area.height.saturating_sub(6).min(19);
+    if let Some(dialog) = &mut app.dialog {
+        let login_open = dialog.login.is_some();
+        let w = if login_open {
+            area.width.saturating_sub(4).min(110)
+        } else {
+            area.width.saturating_sub(8).min(88)
+        };
+        let h = if login_open {
+            area.height.saturating_sub(2).min(23)
+        } else {
+            area.height.saturating_sub(6).min(19)
+        };
         let rect = Rect::new((area.width - w) / 2, (area.height - h) / 2, w, h);
         frame.render_widget(Clear, rect);
         let block = Block::default()
@@ -551,6 +560,60 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             .border_style(Style::default().fg(p.build));
         let inner = block.inner(rect);
         frame.render_widget(block, rect);
+        if let Some(login) = &mut dialog.login {
+            let rows = Layout::vertical([
+                Constraint::Length(3),
+                Constraint::Min(1),
+                Constraint::Length(3),
+            ])
+            .split(inner);
+            frame.render_widget(
+                Paragraph::new(format!(
+                    "Continue com ChatGPT no navegador.\n{}",
+                    login.message
+                ))
+                .style(p.base())
+                .wrap(Wrap { trim: false }),
+                rows[0],
+            );
+            let block = Block::default()
+                .title(" Link de login · somente leitura ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(p.border));
+            let url_area = block.inner(rows[1]);
+            frame.render_widget(block, rows[1]);
+            let lines = wrap(login.url(), usize::from(url_area.width));
+            login.max_scroll = lines.len().saturating_sub(usize::from(url_area.height));
+            login.scroll = login.scroll.min(login.max_scroll);
+            frame.render_widget(
+                Paragraph::new(lines.into_iter().map(Line::raw).collect::<Vec<_>>())
+                    .scroll((login.scroll.min(u16::MAX as usize) as u16, 0))
+                    .style(p.base()),
+                url_area,
+            );
+            frame.render_widget(
+                Paragraph::new(vec![
+                    Line::styled(
+                        "Enter/O abrir navegador · C copiar link completo",
+                        Style::default().fg(p.build),
+                    ),
+                    Line::styled(
+                        format!(
+                            "↑↓ PgUp/PgDn mouse · linha {}/{} · Esc cancela",
+                            login.scroll + 1,
+                            login.max_scroll + 1
+                        ),
+                        Style::default().fg(p.muted),
+                    ),
+                    Line::styled(
+                        "Seleção nativa do terminal: segure Shift ao arrastar.",
+                        Style::default().fg(p.muted),
+                    ),
+                ]),
+                rows[2],
+            );
+            return;
+        }
         let rows = Layout::vertical([
             Constraint::Length(
                 if dialog.kind == crate::dialog::DialogKind::ChatGpt && !dialog.choices.is_empty() {
@@ -653,7 +716,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
                 )
                 .block(
                     Block::default()
-                        .title(" Tab completar · Esc fechar ")
+                        .title(" ↑↓ selecionar · Enter executar · Tab completar · Esc fechar ")
                         .borders(Borders::ALL),
                 )
                 .style(p.base()),

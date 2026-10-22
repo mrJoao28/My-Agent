@@ -13,6 +13,8 @@ ratatui = { version = "0.29", default-features = false, features = ["crossterm"]
 crossterm = "0.28"
 unicode-segmentation = "1"
 unicode-width = "0.2"
+url = "2"
+base64 = "0.22"
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

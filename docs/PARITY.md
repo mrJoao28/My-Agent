@@ -143,7 +143,7 @@ testes próximos podem fornecer cobertura indireta, sem comprová-la integralmen
 | UI-04 | Diálogos/foco | Sessões, modelos, modos/agentes, temas e contas ChatGPT; busca/lista, camadas de teclado, Enter/Esc/Tab/Ctrl+C sem acionar input de fundo; toast e erros de rota. | `C/dialogs/index.tsx`, `C/dialogs/sessions-dialog.tsx`, `C/dialogs/models-dialog.tsx`, `C/dialogs/agents-dialog.tsx`, `C/dialogs/theme-dialog.tsx`, `C/dialogs/chatgpt-dialog.tsx`, `C/providers/keyboard-layer/index.tsx`, `C/providers/dialog/index.tsx`, `C/components/route-error.tsx` | em andamento | `C/dialogs/agents-dialog.test.tsx`, `C/dialogs/models-dialog.test.tsx`, `C/components/approval-panel.test.tsx`, `C/components/resume-panel.test.tsx`; cobertura não é completa para todos os diálogos |
 | UI-05 | Temas | Paletas claras/escuras, Nightfox padrão, seleção e persistência global em preferences.json; falha de preferência não impede interface. | `C/theme.ts`, `C/providers/theme/index.tsx`, `C/dialogs/theme-dialog.tsx` | feito | `C/components/token-usage-bar.test.tsx`, `C/components/session-shell.test.tsx`; sem teste dedicado de persistência do tema identificado |
 | UI-06 | Uso/status | Barra de tokens acumulados com cores do tema e formatos k/M, escala visual de 1 milhão sem limitar consumo/contexto; status, duração, modo em execução e aviso de comandos indisponíveis. | `C/components/token-usage-bar.tsx`, `C/lib/token-usage.ts`, `C/components/status-bar.tsx`, `C/components/session-shell.tsx` | em andamento | `C/lib/token-usage.test.ts`, `C/components/token-usage-bar.test.tsx`, `C/components/session-shell.test.tsx` |
-| UI-07 | Navegador | Abrir URL de autenticação no navegador por plataforma com validação e diagnóstico de falha, sem shell arbitrário. | `C/lib/open-browser.ts`, `C/dialogs/chatgpt-dialog.tsx` | pendente | `C/lib/open-browser.test.ts` |
+| UI-07 | Navegador | Abrir URL de autenticação no navegador por plataforma com validação e diagnóstico de falha, sem shell arbitrário. | `C/lib/open-browser.ts`, `C/dialogs/chatgpt-dialog.tsx` | em andamento | Rust: `crates/tui/src/links.rs`, testes de foco/renderização e smoke Linux/PTY com helpers fictícios; browser gráfico/clipboard real Windows/macOS ainda não verificados. `C/lib/open-browser.test.ts` é referência histórica. |
 | API-01 | API local | Bind loopback, token privado/efêmero, negar Origin de navegador e Host externo/rebinding, limite de corpo 1 MiB e validação de workspace/proprietário. Não é serviço multiusuário. | `S/index.ts`, `S/security/auth.ts`, `S/security/workspaces.ts`, `H/local-auth.ts`, `C/lib/api-client.ts` | pendente | `S/security/auth.test.ts`, `S/routes/sessions.test.ts`, `S/launcher.test.ts`, `S/lib/chatgpt.test.ts` |
 | API-02 | Contratos | Rotas locais de sessões, chat/retomada/undo, aprovações, modelos/chaves e ChatGPT; erros/validação HTTP e SSE. Preservar comportamento sem obrigar a mesma separação cliente/servidor em Rust. | `S/routes/chat.ts`, `S/routes/permissions.ts`, `S/routes/sessions.ts`, `S/routes/models.ts`, `S/routes/chatgpt.ts`, `C/lib/http-errors.ts` | pendente | `S/routes/sessions.test.ts`, `S/services/chat-recovery.test.ts`, `M/exec.test.ts`, `S/lib/chatgpt.test.ts`, `C/hooks/use-chat.test.tsx` |
 
@@ -1405,3 +1405,40 @@ Persistence; a correção do defeito de representação é comprovada por
 regressão local, mas a resolução daquele erro remoto depende dessa rodada.
 Nenhum gate foi removido, teste ignorado para contornar falha ou proteção
 de permissões relaxada. Sem commit, push, tag ou publicação desta revisão.
+
+### Correção do login ChatGPT na TUI — 22/10/2026
+
+O menu `/` agora executa com Enter a sugestão escolhida pelas setas. Antes,
+selecionar `/chatgpt` com o texto ainda em `/` enviava esse texto ao modelo,
+produzindo um erro de API key em vez de abrir a conta. Digitar `/` sem navegar
+continua preservando texto literal. Sem contas registradas, `/chatgpt` inicia
+diretamente o login; contas existentes mantêm seu seletor.
+
+O painel de login tem URL somente leitura, rolagem, abertura automática do
+navegador, Enter/O para tentar abrir novamente e C para copiar a URL inteira.
+Integrações: xdg-open/gio e wl-copy/xclip/xsel no Linux, wslview/PowerShell
+no WSL, open/pbcopy no macOS e PowerShell no Windows. Sem clipboard nativo,
+OSC 52 solicita a cópia ao terminal sem afirmar que ela foi aceita. Esc e
+Ctrl+C cancelam o listener e descartam resultados atrasados. Falhas mantêm
+um diálogo com nova tentativa, sem confundir autenticação ChatGPT com API key.
+
+Links são validados antes da execução, passados como argumento ou stdin e
+nunca interpolados em código de shell. Debug oculta a URL efêmera. As crates
+url e base64 já estavam no lockfile; agora a TUI as declara diretamente para
+validar a origem do link e codificar OSC 52, respectivamente. Nenhuma versão
+nova foi introduzida. Não foram alterados OAuth/PKCE, providers ou credenciais.
+
+Validação local Linux: fmt, check all-targets, Clippy com warnings negados e
+suíte completa aprovada (225 testes; um teste Docker real ignorado). Após
+ajustes finais de edição/Clone, check, Clippy e os 34 testes da TUI foram
+executados novamente e passaram. Snapshots/TestBackend cobrem painel pequeno,
+links longos, rolagem e prioridade do teclado.
+
+Um smoke test em PTY Linux com estado temporário e helpers simulados verificou
+o percurso `/` → seis setas → Enter, abertura, cópia byte a byte, nova abertura,
+callback OAuth sintético de recusa, falha dos helpers, fallback OSC 52,
+cancelamento, nova tentativa e restauração do terminal ao sair. Não houve
+login real, troca de tokens ou inferência. Navegador/clipboard reais no Ubuntu,
+Windows Terminal e macOS ainda exigem validação manual. O CI dos três sistemas
+deve validar esta revisão após o envio. Correção diretamente na main conforme
+autorização expressa do usuário; sem tag nem publicação npm.

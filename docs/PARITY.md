@@ -1520,3 +1520,27 @@ ordem e a verificação de integridade. Ao retomar somente publish, a integridad
 do Windows foi aceita e o npm recusou Linux x64 com E404 de autorização.
 Esse bloqueio depende do cadastro privado do Trusted Publisher desse pacote;
 o principal permanece em 0.1.0 enquanto faltar uma plataforma autorizada.
+
+### Checagem inicial dos seis Trusted Publishers — 22/10/2026
+
+A consulta ao registry confirmou principal 0.1.0, Windows 0.2.2 e Linux x64
+0.1.0. O último run de distribuição 39871510613 falhou no PUT do Linux x64
+com E404 de autorização; o CI verde era dos gates, não de publicação completa.
+
+Adicionado authorize antes de prepare: troca identidade OIDC por token npm
+em cada um dos seis pacotes no mesmo environment da publicação. Todos os
+erros aparecem juntos numa tabela, sem tokens ou corpo de respostas. Recusa
+bloqueia preparação de versão/tag, builds e publicação, evitando novas versões
+parciais por cadastro ausente. PRs/dry-runs não pedem credenciais. A troca não
+prova a permissão de PUT: Allow npm publish continua obrigatório em cada
+cadastro, que somente o mantenedor pode alterar no npm. A etapa de publicação
+usará setup-node@v7, que remove o fallback de token fictício da versão antiga.
+
+Validação local: 24 testes Node aprovados, incluindo audience, seis pacotes,
+HTTP 403/404 simultâneos, erro de identidade/rede, resposta inválida, ausência
+de vazamento e recusa de forks/PRs/contexto incorreto. Todos os testes usam
+valores fictícios. Não houve login/publicação npm local nem dependência nova.
+Rust não está instalado neste ambiente novo; fmt/check/Clippy/testes Rust
+serão verificados pelo CI dos três sistemas, com testes Node incluídos. A
+execução remota do authorize deve identificar os cadastros efetivamente
+recusados e confirmar o comportamento de bloqueio antes de criar tags.

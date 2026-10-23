@@ -89,6 +89,39 @@ A execução manual **sem** publish=true continua sendo somente build/testes.
 Um push manual de tag v* continua sendo um caminho de publicação explícita,
 independente da variável da automação; exige todos os mesmos gates e environment.
 
+## Diagnóstico de autorização antes da release
+
+O job `authorize` roda antes de prepare em publicações automáticas e por tag.
+Usa o mesmo environment npm-release e id-token:write do publisher para obter
+uma identidade GitHub com audience npm:registry.npmjs.org e testar a troca OIDC
+nos **seis pacotes**, pela API oficial do npm. Não publica, não altera cadastros,
+não grava tokens e não imprime respostas/credenciais. O resumo do run mostra
+uma tabela por pacote, incluindo todas as recusas HTTP e falhas de conexão.
+
+Se houver recusa, prepare, builds e publish ficam bloqueados; nenhuma versão
+ou tag automática nova é criada. PRs e execução manual sem publish continuam
+sem autenticação real no npm. Isso evita compilar/publicar Windows antes de
+descobrir que o cadastro Linux ou o principal não funciona. O CI normal dos
+três sistemas continua rodando independentemente do cadastro npm.
+
+Troca OIDC aceita confirma o cadastro de identidade, mas não substitui a opção
+**Allow npm publish**: o npm ainda verifica a permissão de publicação direta
+no envio. Os seis cadastros precisam apontar para mrJoao28 / My-Agent /
+release.yml / npm-release. Corrija as linhas recusadas na conta npm; o código
+não pode conceder a si mesmo essas permissões. Não use npm whoami como teste
+de Trusted Publishing. A etapa de publicação usa setup-node@v7 para eliminar
+o fallback de NODE_AUTH_TOKEN fictício existente na ação antiga.
+
+Depois de corrigir o cadastro, retome o job authorize falho ou use Re-run failed
+jobs no run mais recente. Sem alteração de código, o prepare poderá retomar a
+tag ainda não publicada ou preparar um patch novo em caso de publicação parcial,
+conforme a seção de recuperação. Para runs antigos que já chegaram ao publish,
+reexecute somente publish preservando seus artefatos originais.
+
+Referências: [troca OIDC oficial](https://api-docs.npmjs.com/),
+[Trusted Publishers](https://docs.npmjs.com/trusted-publishers/) e
+[setup-node](https://github.com/actions/setup-node).
+
 ## Versão e pacotes
 
 `Cargo.toml` é a fonte da versão estável. O validador confere nove entradas
@@ -127,6 +160,7 @@ main, tags v* e workflow_dispatch. PRs, main sem ativação e execução manual
 com publish=false preparam/testam sem publicar. Com a automação ativa, o
 prepare fixa o SHA da release antes destes jobs.
 
+0. Em publicação, valida a troca OIDC dos seis pacotes antes de alterar versão/tag.
 1. Valida versões/tag, empacota o principal e produz a matriz única.
 2. Executa fmt, Clippy, testes Rust e testes Node em Windows/Linux/macOS.
 3. Compila/empacota cinco binários em runners nativos.

@@ -37,10 +37,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  authorize:
+    # Exchange OIDC for all six packages before making any commit/tag or build.
+    if: >-
+      github.repository == 'mrJoao28/My-Agent' &&
+      ((github.ref == 'refs/heads/main' && vars.NPM_AUTO_RELEASE == 'true' &&
+        (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish))) ||
+       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')))
+    runs-on: ubuntu-24.04
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref == 'refs/heads/main' && 'main' || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Testar diagnóstico sem usar credenciais reais
+        run: node --test scripts/npm/trust.test.mjs
+      - name: Validar os seis cadastros Trusted Publisher
+        env:
+          NPM_AUTO_RELEASE: ${{ vars.NPM_AUTO_RELEASE }}
+          REQUEST_PUBLISH: ${{ inputs.publish || false }}
+        run: node scripts/npm/trust.mjs
+
   prepare:
+    needs: authorize
     # A single activation switch, after npm/environment setup. PRs never write.
     if: >-
       github.repository == 'mrJoao28/My-Agent' &&
+      needs.authorize.result == 'success' &&
       github.ref == 'refs/heads/main' &&
       vars.NPM_AUTO_RELEASE == 'true' &&
       (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish))
@@ -70,9 +100,10 @@ jobs:
         run: node scripts/npm/auto-release.mjs
 
   validate:
-    needs: prepare
+    needs: [authorize, prepare]
     if: >-
       always() && !cancelled() &&
+      (needs.authorize.result == 'success' || needs.authorize.result == 'skipped') &&
       (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') &&
       (needs.prepare.outputs.publish == 'true' || github.event_name == 'pull_request' ||
        startsWith(github.ref, 'refs/tags/v') ||
@@ -165,7 +196,7 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked --workspace -- --test-threads=1
-      - run: node --test scripts/npm/launcher.test.mjs scripts/npm/auto-release.test.mjs
+      - run: node --test scripts/npm/launcher.test.mjs scripts/npm/auto-release.test.mjs scripts/npm/trust.test.mjs
 
   build:
     needs: validate
@@ -290,7 +321,7 @@ jobs:
         with:
           ref: ${{ needs.validate.outputs.ref }}
           fetch-depth: 0
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           registry-url: https://registry.npmjs.org

@@ -61,7 +61,7 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - name: Testar automação e launcher npm sem publicação
-        run: node --test scripts/npm/launcher.test.mjs scripts/npm/auto-release.test.mjs
+        run: node --test scripts/npm/launcher.test.mjs scripts/npm/auto-release.test.mjs scripts/npm/trust.test.mjs
       - name: Conferir ajuda e versão do binário
         run: |
           cargo run --locked -p myagent-cli --bin myagent -- --help

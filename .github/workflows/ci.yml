@@ -22,7 +22,7 @@ jobs:
       MYAGENT_TEST_DOCKER_IMAGE: alpine:3
       MYAGENT_TEST_SERVER_SENTINEL: fictitious-host-value
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Instalar toolchain fixada
         shell: bash
         run: |
@@ -41,7 +41,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Obter código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Instalar toolchain fixada
         shell: bash
         run: |

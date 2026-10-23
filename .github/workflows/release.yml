@@ -50,7 +50,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.ref == 'refs/heads/main' && 'main' || github.sha }}
       - uses: actions/setup-node@v7
@@ -82,7 +82,7 @@ jobs:
       tag: ${{ steps.release.outputs.tag }}
       publish: ${{ steps.release.outputs.publish }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -117,7 +117,7 @@ jobs:
       publish: ${{ needs.prepare.outputs.publish == 'true' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
       auto: ${{ needs.prepare.outputs.publish == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.ref || github.sha }}
           fetch-depth: 0
@@ -180,7 +180,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.ref }}
           fetch-depth: 0
@@ -212,7 +212,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.ref }}
           fetch-depth: 0
@@ -259,7 +259,7 @@ jobs:
       matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.ref }}
           fetch-depth: 0
@@ -288,7 +288,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: node:24-bookworm-slim
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.ref }}
       - uses: actions/download-artifact@v4
@@ -317,7 +317,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.ref }}
           fetch-depth: 0

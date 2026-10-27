@@ -20,7 +20,7 @@ myagent-store.workspace = true
 sha2 = "0.10"
 base64 = "0.22"
 getrandom = "0.4"
-jsonwebtoken = { version = "10", default-features = false, features = ["rust_crypto"] }
+jsonwebtoken = { version = "11", default-features = false, features = ["rust_crypto"] }
 
 [lints]
 workspace = true

@@ -155,7 +155,7 @@ jobs:
           appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({include:platforms.map(p=>({...p,binary:binaryName(p.key)}))})}\n`);
           JS
       - run: node scripts/npm/pack.mjs main - release/main
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: npm-main
           path: |
@@ -242,7 +242,7 @@ jobs:
       - run: cargo build --locked --release -p myagent-cli --target '${{ matrix.target }}'
       - name: Empacotar binário e conferir formato/arquitetura
         run: node scripts/npm/pack.mjs '${{ matrix.key }}' 'target/${{ matrix.target }}/release/${{ matrix.binary }}' 'release/${{ matrix.key }}'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: npm-${{ matrix.key }}
           path: |
@@ -276,7 +276,7 @@ jobs:
         run: node scripts/npm/verify.mjs release --before-smoke
       - name: Instalar tarballs inéditos por registry local e executar fora do checkout
         run: node scripts/npm/smoke.mjs release '${{ matrix.key }}.smoke.json'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: smoke-${{ matrix.key }}
           path: '${{ matrix.key }}.smoke.json'
@@ -300,7 +300,7 @@ jobs:
           if command -v rustc || command -v cargo; then exit 1; fi
           node scripts/npm/verify.mjs release --before-smoke
           node scripts/npm/smoke.mjs release linux-container.smoke.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: smoke-linux-container
           path: linux-container.smoke.json

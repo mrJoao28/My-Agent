@@ -28,7 +28,7 @@ workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 rsa = "0.9"
-rand = "0.8"
+rand = "0.10"
 
 [target.'cfg(windows)'.dependencies]
 winapi-util = "0.1"

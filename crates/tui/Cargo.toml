@@ -10,7 +10,7 @@ description = "Interface de terminal Grafite do My-Agent."
 
 [dependencies]
 ratatui = { version = "0.29", default-features = false, features = ["crossterm"] }
-crossterm = "0.28"
+crossterm = "0.29"
 unicode-segmentation = "1"
 unicode-width = "0.2"
 url = "2"
